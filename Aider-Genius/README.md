@@ -48,8 +48,8 @@ Aider-Genius is an advanced enhancement of the popular [Aider](https://github.co
 
 ```bash
 # Clone the Aider-Genius repository
-git clone https://github.com/jaseci-labs/Agentic-AI.git
-cd Agentic-AI/Aider-Genius
+git clone https://github.com/udithishanka/jac-coder.git
+cd jac-coder
 
 # Set up the environment
 python -m pip install -e .
