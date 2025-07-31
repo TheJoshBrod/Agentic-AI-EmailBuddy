@@ -8,3 +8,8 @@ This repository contains AI-powered coding tools and projects, with a focus on t
 An enhanced version of Aider (AI pair programming tool) specifically adapted for the Jac programming language ecosystem.
 
 See the [Aider-Genius README](./Aider-Genius/README.md) for detailed information about this project.
+
+### Task Manager using JIVAS
+
+
+### Tobu - MTP Integrated
