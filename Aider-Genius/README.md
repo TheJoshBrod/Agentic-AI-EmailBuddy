@@ -106,28 +106,7 @@ aider> "I want to build a REST API for user authentication with proper security"
 
 ## Architecture
 
-Aider-Genius extends the original Aider architecture with intelligent agentic components:
-
-```
-aider-genius/
-├── genius/              # Genius mode implementation
-│   ├── planner.py      # Intelligent planning agent
-│   ├── coder.py        # Enhanced coding agent
-│   ├── validator.py    # Comprehensive validation agent
-│   └── coordinator.py  # Workflow coordination
-├── agents/              # Specialized AI agents
-│   ├── architect.py    # System architecture design
-│   ├── reviewer.py     # Code review and quality assurance
-│   └── tester.py       # Automated testing generation
-├── core/                # Enhanced core functionality
-│   ├── workflow.py     # Agentic workflow engine
-│   ├── memory.py       # Project knowledge management
-│   └── context.py      # Enhanced context awareness
-└── integrations/        # External tool integrations
-    ├── linters.py      # Code quality tools
-    ├── testing.py      # Testing frameworks
-    └── docs.py         # Documentation generation
-```
+Aider-Genius extends the original Aider architecture with intelligent agentic components.
 
 ## Features in Detail
 
@@ -163,26 +142,6 @@ Genius mode integrates seamlessly with modern development practices:
 - **Documentation Sync**: Keeps documentation updated with code changes
 
 ## Configuration
-
-### Genius Mode Settings
-Configure the agentic workflow in `.aider-genius.yml`:
-
-```yaml
-genius_mode:
-  enabled: true
-  planning_depth: "thorough"  # quick, normal, thorough
-  validation_level: "comprehensive"  # basic, standard, comprehensive
-  learning_mode: true
-  auto_commit: true
-  
-agents:
-  planner:
-    strategy: "iterative"  # linear, iterative, adaptive
-  coder:
-    style: "maintainable"  # quick, balanced, maintainable
-  validator:
-    strictness: "high"  # low, medium, high
-```
 
 ### API Keys
 Set up your preferred AI model:
