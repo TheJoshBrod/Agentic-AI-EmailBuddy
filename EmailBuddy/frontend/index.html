@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Assistant</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="script.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1>📧 Email Assistant</h1>
+            <p>Ask me anything about your emails</p>
+            <button id="uploadButton" class="upload-button">Upload New .mbox File</button>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+            <div class="message assistant">
+                <div>
+                    <div class="message-label">Assistant</div>
+                    <div class="message-content">
+                        <p>Hello! 👋</p>
+                        <p>I'm your email assistant.</p>
+                        <br>
+                        <p>I can help you:</p>
+                        <ul>
+                            <li>Find information</li>
+                            <li>Summarize emails</li>
+                            <li>Answer questions about your inbox</li>
+                        </ul>
+                        <br>
+                        <p>What would you like to do today?</p>
+                    </div>
+                </div>
+            </div>
+            <div class="typing-indicator" id="typingIndicator">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+
+        <div class="chat-input-container">
+            <div class="chat-input-wrapper">
+                <input 
+                    type="text" 
+                    id="messageInput" 
+                    placeholder="Ask about your emails..."
+                    autocomplete="off"
+                />
+                <button id="sendButton">Send</button>
+            </div>
+        </div>
+    </div>
+
+    
+</body>
+</html>
