@@ -1,4 +1,5 @@
 """Contains all the helper walkers and tool calls."""
+
 include nodes;
 
 walker FindRecipientNodes{
@@ -41,3 +42,29 @@ walker FindSenderNode {
     }
 }
 
+
+def emailSearch(query: str) -> list[Email]{
+    # TODO:
+    # Create query embedding
+    # Vector Search
+    # Find email nodes
+}
+
+def personSearch(query: str) -> list[Person]{
+    # TODO:
+    # Create query embedding
+    # Vector Search
+    # Find email nodes
+}
+
+def registerEmail(msg: Email) -> None{
+    # TODO:
+    # Create subject and body embeddings
+    # Put into DB(?)
+}
+
+def registerPerson(person: Person) -> None{
+    # TODO:
+    # Create subject and body embeddings
+    # Put into DB(?)
+}

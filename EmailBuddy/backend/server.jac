@@ -4,8 +4,8 @@
 import json;
 
 # Jac Files
-include backend.tools;
-include backend.nodes;
+include tools;
+include nodes;
 
 walker upload_emails{
     has raw_emails: list;
@@ -48,6 +48,7 @@ walker upload_emails{
                 }
             }
 
+            # Always create a new email node if uploaded
             email = Email(date=msg["date"], subject=msg["subject"], body=msg["body"]);
             root ++> email;
             sender ++> email;
@@ -60,12 +61,30 @@ walker upload_emails{
 
 walker ask_email {
     has query: str;
+    has conversation_history: list = [];
 
     obj __specs__ {
         static has auth: bool = False;
     }
 
-    can get_email_answer with `root entry {
+    can handle_query with `root entry {
+        self.conversation_history.append({"sender": "user", "message": self.query});
+        
+        starting_emails: list[Emails] = emailSearch(self.query);
+        starting_people: list[People] = personSearch(self.query);
+
         report {"response": self.query, "source": []};
     }
+
+    can handle_email_node with `Email entry {
+        # TODO:
+        # Provide subject body/
+    }
+
+    
+    can handle_person_node with `Person entry {
+        # TODO:
+        # 
+    }
+
 }
