@@ -1,4 +1,4 @@
-# Contains all node types of the graph
+"""Contains all node types of the graph."""
 
 node Person{
     has name: str;
