@@ -18,9 +18,10 @@ walker upload_emails{
     }
 
     can upload_email with `root entry{
-        for child in [root -->] {
-            del child;
-        }
+
+        # for child in [root -->] {
+        #     del child;
+        # }
 
         emails: list = self.raw_emails;
         for msg in emails {
@@ -73,33 +74,74 @@ walker upload_emails{
 
 walker ask_email {
     has query: str;
-    has conversation_history: list = [];
+    has conversation_history: list[dict] = [];
 
     obj __specs__ {
         static has auth: bool = False;
     }
 
     can handle_query with `root entry{
-        self.conversation_history.append({"sender": "user", "message": self.query});
+        self.conversation_history.append({"role": "user", "content": self.query});
 
-        starting_emails: list[Email] = find_email_body(self.query);
+        starting_emails: list[str] = find_email_body(self.query);
         FindEmails = FindEmailNode(targets=starting_emails);
         root spawn FindEmails;
 
-        # TODO: Traverse graph w/ llm
-
-        report {"response": starting_emails[0], "source": []};
+        initial_emails: list[Email] = FindEmails.emails;
+        response = choose_next_email_node(initial_emails, self.conversation_history);
+        print(f"\n\n\n\n{len(self.conversation_history)}");
+        print(response.reasoning_for_choice);
+        print(response.choice);
+        
+        self.conversation_history.append({"role": "user", "content": response[1]});
+        if (response[0] != "@end@"){
+            initial_email: Email;
+            for email in initial_emails {
+                if(response[0] == email.body){
+                    initial_email = email;
+                    break;
+                }
+            }
+            visit initial_email;
+        }
+        
+        report {"response": self.conversation_history[-1]["content"], "source": []};
     }
 
     can handle_email_node with Email entry {
-        # TODO:
-        # Provide subject body/
+        sender: list[Person] = [<--];
+        recipients: list[Person] = [-->];
+
+        # TODO: Do i need to put the sender, recipients found in convo history?
+        # self.conversation_history.append({"type": "tool-call", }); 
+        
+        response = choose_next_person_node(sender, recipients, here, self.conversation_history);
+        print(f"\n\n\n\n{len(self.conversation_history)}");
+        print(response.reasoning_for_choice);
+        print(response.choice);
+        self.conversation_history.append({"role": "system", "content": response[1]});
+        if response[0] == "@end@" {
+            disengage;
+        }
     }
 
-    
+
     can handle_person_node with Person entry {
-        # TODO:
-        # 
+        sent: list[Person] = [<--];
+        received: list[Person] = [-->];
+
+        # TODO: Do i need to put the sent, received found in convo history?
+        # self.conversation_history.append({"type": "tool-call", }); 
+        
+        response = choose_next_person_node(here, sent, received, self.conversation_history);
+        print(f"\n\n\n\n{len(self.conversation_history)}");
+        print(response.reasoning_for_choice);
+        print(response.choice);
+        self.conversation_history.append({"role": "system", "content": response[1]});
+        if response[0] == "@end@" {
+            disengage;
+        }
+
     }
 
 }
