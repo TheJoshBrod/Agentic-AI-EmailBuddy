@@ -1,10 +1,11 @@
-
 $(document).ready(function() {
     const $messages = $('#chatMessages');
     const $input = $('#messageInput');
     const $sendBtn = $('#sendButton');
     const $typing = $('#typingIndicator');
     const $uploadBtn = $('#uploadButton');
+
+    let jsonData = [];
 
     function scrollToBottom() {
         $messages.scrollTop($messages[0].scrollHeight);
@@ -67,10 +68,13 @@ $(document).ready(function() {
         scrollToBottom();
 
         $.ajax({
-            url: 'http://localhost:5000/chat',
+            url: 'http://localhost:8000/walker/ask_email',
             method: 'POST',
             contentType: 'application/json',
-            data: JSON.stringify({ raw_emails: jsonData }),
+            data: JSON.stringify({
+                query: message,       // send the user’s text
+                raw_emails: jsonData  // keep the email data too
+            }),
             timeout: 30000,
             success: function(response) {
                 $typing.hide();
@@ -125,7 +129,7 @@ $(document).ready(function() {
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
-                    const jsonData = JSON.parse(e.target.result);
+                    jsonData = JSON.parse(e.target.result); // assign to global variable
 
                     if (!Array.isArray(jsonData)) {
                         throw new Error("Invalid JSON format. Expected an array of email objects.");
@@ -159,7 +163,6 @@ $(document).ready(function() {
                             $uploadBtn.prop('disabled', false);
                         }
                     });
-
 
                 } catch (err) {
                     $typing.hide();
