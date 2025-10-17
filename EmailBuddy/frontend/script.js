@@ -78,7 +78,7 @@ $(document).ready(function() {
             timeout: 30000,
             success: function(response) {
                 $typing.hide();
-                const reply = response.reply || response.message || 'I received your message.';
+                const reply = response.reports[0].response || 'Error.';
                 const references = response.references || null;
                 addMessage(reply, 'assistant', references);
                 $sendBtn.prop('disabled', false);
