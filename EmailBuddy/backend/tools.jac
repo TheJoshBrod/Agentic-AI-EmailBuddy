@@ -76,6 +76,24 @@ def normalize(email: str) -> str{
     return email.strip();
 }
 
+def email_node_to_string(email: Email) -> str{
+    output: str = "";
+    output += "Subject:\n" + email.subject;
+    output += "\nDate\n:" + email.date;
+    output += "\n\nBody:\n" + email.body;
+    return output;
+}
+
+
+def person_node_to_string(person: Person) -> str{
+    output: str = "";
+    output += "Name:\n" + person.name;
+    return output;
+}
+
+# Handles all Agentic selection
+
+
 obj Response{
     has choice: str;
     has reasoning_for_choice: str;
@@ -98,7 +116,7 @@ OR
 If you have an answer to the initial user prompt
 choice: "@end@", reasoning_for_choice: <Final response to display to user>
 """
-def choose_next_person_node(senders: list[Person], recipients: list[Person], email: Email, conversation_history: list[dict]) -> Response by llm();
+def choose_next_person_node(senders: list[str], recipients: list[str], email: str, conversation_history: list[dict]) -> Response by llm();
 
 """
 person: Person who is being explored
@@ -116,7 +134,7 @@ OR
 If you have an answer to the initial user prompt
 choice: "@end@", reasoning_for_choice: <Final response to display to user>
 """
-def choose_next_email_node(person: str, sent: list[Email], received: list[Email], conversation_history: list[dict]) -> Response by llm();
+def choose_next_email_node(person: str, sent: list[str], received: list[str], conversation_history: list[dict]) -> Response by llm();
 
 
 """
@@ -133,5 +151,5 @@ OR
 If you have an answer to the initial user prompt
 choice: "@end@", reasoning_for_choice: <Final response to display to user>
 """
-def choose_next_email_node(emails: list[Email], conversation_history: list[dict]) -> Response by llm();
+def choose_next_email_node(emails: list[str], conversation_history: list[dict]) -> Response by llm();
 
