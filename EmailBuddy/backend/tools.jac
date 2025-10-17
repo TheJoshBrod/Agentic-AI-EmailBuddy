@@ -20,7 +20,7 @@ walker FindRecipientNodes{
             self.persons.append(here);
             self.missing = [name for name in self.missing if cleaned_name not in name];
         }
-        if len(missing) == 0 {
+        if len(self.missing) == 0 {
             disengage;
         }
         visit [-->];
@@ -40,6 +40,25 @@ walker FindSenderNode {
         if here.name == self.target {
             self.found = True;
             self.person = here;
+            disengage;
+        }
+        visit [-->];
+    }    
+}
+
+walker FindEmailNode{
+    has targets: list[str] = [];
+    has emails: list[Email] = [];
+
+    can start with `root entry {
+        visit [-->];
+    }
+
+    can search with Email entry {   
+        if here.body in self.targets {
+            self.emails.append(here);
+        }
+        if len(self.emails) == len(self.targets) {
             disengage;
         }
         visit [-->];
