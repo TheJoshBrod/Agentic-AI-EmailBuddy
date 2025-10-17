@@ -5,10 +5,11 @@ import from fastapi { HTTPException, status }
 import from jac_cloud.jaseci.utils.logger { logger }
 import from utils { convert_date_to_valid_format }
 import from mtp { extract_memory_details, update_memory_details }
-import from mtllm.llm { Image }
+import from byllm { Image }
 import from google_maps_service { google_location_service }
 import from memory { visit_memories }
 import from nodes_and_edges { session, sessions, memory, memories }
+import from ai_client { openai_client }
 
 
 class Location(BaseModel) {
@@ -29,6 +30,7 @@ walker init_session(visit_sessions) {
     has image_url: str;
     has location: Location = Location(latitude=0, longitude=0);
     has date: str = "";
+    has use_byllm: bool = True;
 
     class __specs__ {
         has tags: list = ["session"];
@@ -41,6 +43,7 @@ walker init_session(visit_sessions) {
 walker continue_session(visit_sessions) {
     has session_id: str;
     has utterance: str;
+    has use_byllm: bool = True;
 
     class __specs__ {
         has tags: list = ["session"];
