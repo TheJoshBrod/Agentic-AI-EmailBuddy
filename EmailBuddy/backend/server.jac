@@ -59,7 +59,7 @@ walker upload_emails{
             }
 
 
-            # # Always create a new email node if uploaded
+            # Always create a new email node if uploaded
             email = Email(date=msg["date"], subject=msg["subject"], body=msg["body"]);
             root ++> email;
             sender ++> email;
@@ -83,11 +83,11 @@ walker ask_email {
         self.conversation_history.append({"sender": "user", "message": self.query});
 
         starting_emails: list[Email] = find_email_body(self.query);
-        starting_people: list[People] = personSearch(self.query);
-        
-        print("\n\n\n\n\n\n\n\n\n");
-        print(starting_emails);
-        print("\n\n\n\n\n\n\n\n\n");
+        FindEmails = FindEmailNode(targets=starting_emails);
+        root spawn FindEmails;
+
+        # TODO: Traverse graph w/ llm
+
         report {"response": starting_emails[0], "source": []};
     }
 

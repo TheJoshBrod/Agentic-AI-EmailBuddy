@@ -15,7 +15,6 @@ def create_email_embedding(jsonified_email: dict) -> None{
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS emails (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        subject TEXT NOT NULL,
         content TEXT NOT NULL,
         embedding BLOB
     )
@@ -23,17 +22,17 @@ def create_email_embedding(jsonified_email: dict) -> None{
 
     sender: str = jsonified_email["from"];        
     recipients: str = str(jsonified_email["to"]);
-    date: str = jsonified_email["subject"];
+    date: str = jsonified_email["date"];
     subject: str = jsonified_email["subject"];
-    body: str = jsonified_email["subject"];
+    body: str = jsonified_email["body"];
 
     model = sentence_transformers.SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2");
-    email = f"date: <{date}>\nsender: <{sender}>\nrecipient: <{recipients}>\nsubject: <{subject}>\n\nbody:\n{body}";
+    email = f"date: <{date}>\nsender: <{sender}>\nrecipient: <{recipients}>\nsubject: <{subject}>\n\nbody:<{body}>";
     embeddings = model.encode([email])[0];
     embedding = np.array(embeddings, dtype=np.float32);
     embedding_blob = embedding.tobytes();
 
-    cursor.execute("INSERT INTO emails (content, embedding) VALUES (?, ?)", (email, embedding_blob));
+    cursor.execute("INSERT INTO emails (content, embedding) VALUES (?, ?)", (body, embedding_blob));
     conn.commit();
     conn.close();
 }
