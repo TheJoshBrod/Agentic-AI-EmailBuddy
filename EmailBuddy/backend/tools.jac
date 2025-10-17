@@ -13,10 +13,14 @@ walker FindRecipientNodes{
     }
 
     can search with Person entry {
-        if here.name in self.targets {
+        
+        cleaned_name = normalize(here.name);
+        if cleaned_name in self.targets {
             # Track found people, remove from missing list
             self.persons.append(here);
-            self.missing = [name for name in self.missing if name != here.name];
+            self.missing = [name for name in self.missing if cleaned_name not in name];
+        }
+        if len(missing) == 0 {
             disengage;
         }
         visit [-->];
@@ -29,13 +33,13 @@ walker FindSenderNode {
 
     can start with `root entry {
         visit [-->];
+        return self.person;
     }
 
     can search with Person entry {
         if here.name == self.target {
-            print(f"Found {here.name}!");
             self.found = True;
-            self.sender = here;
+            self.person = here;
             disengage;
         }
         visit [-->];
@@ -67,4 +71,11 @@ def registerPerson(person: Person) -> None{
     # TODO:
     # Create subject and body embeddings
     # Put into DB(?)
+}
+
+def normalize(email: str) -> str{
+    if "<" in email{
+        return email.split("<")[1].split(">")[0].strip();
+    }
+    return email.strip();
 }
