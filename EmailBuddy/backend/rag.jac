@@ -8,19 +8,27 @@ def cosine_similarity(a: np.narray, b: np.narray) -> float{
     return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b));
 }
     
-def create_email_embedding(email: str) -> None{
+def create_email_embedding(jsonified_email: dict) -> None{
     conn: sqlite3.Connection = sqlite3.connect("vectorDB.db");
     cursor: sqlite3.Cursor = conn.cursor();
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS emails (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        subject TEXT NOT NULL,
         content TEXT NOT NULL,
         embedding BLOB
     )
     """);
 
+    sender: str = jsonified_email["from"];        
+    recipients: str = str(jsonified_email["to"]);
+    date: str = jsonified_email["subject"];
+    subject: str = jsonified_email["subject"];
+    body: str = jsonified_email["subject"];
+
     model = sentence_transformers.SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2");
+    email = f"date: <{date}>\nsender: <{sender}>\nrecipient: <{recipients}>\nsubject: <{subject}>\n\nbody:\n{body}";
     embeddings = model.encode([email])[0];
     embedding = np.array(embeddings, dtype=np.float32);
     embedding_blob = embedding.tobytes();
