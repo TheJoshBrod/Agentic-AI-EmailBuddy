@@ -4,7 +4,11 @@
 import from byllm.llm { Model }
 include nodes;
 
-glob llm = Model(model_name="ollama/llama3.2:latest", verbose=True);
+# glob llm = Model(model_name="ollama/llama3.2:latest", verbose=True);
+
+glob llm = Model(model_name="gemini/gemini-2.5-flash", verbose=True);
+
+
 
 walker FindRecipientNodes{
     has targets: list[str] = [];
@@ -109,7 +113,7 @@ conversation_history: previous prompts and responses
 Return:
 
 Choose the initial person to explore on graph with your thought process
-choice: <person's email>, reasoning_for_choice: <reasoning>
+choice: <person being explored>, reasoning_for_choice: <reasoning>
 
 OR
 
@@ -127,7 +131,7 @@ conversation_history: previous prompts and responses
 Return:
 
 Choose the initial email to explore on graph with your thought process
-choice: <email's body>, reasoning_for_choice: <reasoning>
+choice: <verbatim email subject>, reasoning_for_choice: <reasoning>
 
 OR
 
@@ -144,12 +148,17 @@ conversation_history: previous prompts and responses
 Return:
 
 Choose the initial email to explore on graph with your thought process
-choice: <email's body>, reasoning_for_choice: <reasoning>
+choice: <verbatim email subject>, reasoning_for_choice: <reasoning>
 
 OR
 
 If you have an answer to the initial user prompt
 choice: "@end@", reasoning_for_choice: <Final response to display to user>
 """
-def choose_next_email_node(emails: list[str], conversation_history: list[dict]) -> Response by llm();
+def choose_initial_email_node(emails: list[str], conversation_history: list[dict]) -> Response by llm();
 
+
+"""
+Answer the user's initial question with context given.
+"""
+def respond_to_user(convo_history: dict[str,str]) -> str by llm();
