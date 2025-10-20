@@ -109,7 +109,7 @@ option: "@end@", value: "", reasoning_for_choice: <Final response to display to 
 
 OR 
 
-If you feel you are at a deadend or want new search space
+If you REALLY feel you are at a deadend and want new search space (only do this as a last resort)
 option: "@query@", value: <keywords>, reasoning_for_choice: <Why you need a new search space>
 """
 def choose_next_person_node(senders: list[str], recipients: list[str], email: str, conversation_history: list[dict]) -> Response by llm();
@@ -132,7 +132,7 @@ option: "@end@", value: "", reasoning_for_choice: <Final response to display to 
 
 OR 
 
-If you feel you are at a deadend or want new search space
+If you REALLY feel you are at a deadend and want new search space (only do this as a last resort)
 option: "@query@", value: <keywords> reasoning_for_choice: <query to use in vector search for new emails>
 """
 def choose_next_email_node(person: str, sent: list[str], received: list[str], conversation_history: list[dict]) -> Response by llm();
@@ -154,7 +154,7 @@ option: "@end@", value: "", reasoning_for_choice: <Final response to display to 
 
 OR 
 
-If you feel you are at a deadend or want new search space
+If you REALLY feel you are at a deadend and want new search space (only do this as a last resort)
 option: "@query@", value: <keywords>, reasoning_for_choice: <query to use in vector search for new emails>
 """
 def choose_initial_email_node(emails: list[str], conversation_history: list[dict]) -> Response by llm();
@@ -170,12 +170,14 @@ Compresses the choice reasoning and options to choose from to one string that wi
 """
 def summarize(convo_history: dict[str,str], choice: str, reasoning: str, options_to_choose_from: str) -> str by llm();
 
-def expand_query(response: Response, conversation_history: dict[str, str]) -> tuple[Response, dict[str, str]]{
+def expand_query(response: Response, conversation_history: dict[str, str]) -> tuple[Email, dict[str, str]]{
+    emails: list[Emails];
     while response.option == "@query@" {
         starting_emails = find_email_body(response.value);
         FindEmails = FindEmailNode(targets=starting_emails);
         root spawn FindEmails;
-        initial_emails_formatted = [email_node_to_string(email) for email in FindEmails.emails];
+        emails = FindEmails.emails;
+        initial_emails_formatted = [email_node_to_string(email) for email in emails];
         summary = summarize(
             convo_history          = conversation_history,
             choice                 = str(response),
@@ -185,6 +187,8 @@ def expand_query(response: Response, conversation_history: dict[str, str]) -> tu
         conversation_history.append({"role": "system", "content": summary});
         response = choose_initial_email_node(str(initial_emails_formatted), conversation_history);
     }
-    return [response, conversation_history];
+    best_email = pick_best_email(emails, response.value);
+
+    return [best_email, conversation_history];
 }
     

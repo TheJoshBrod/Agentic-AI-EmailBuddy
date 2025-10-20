@@ -103,12 +103,13 @@ walker ask_email {
         if (response.option == "@end@"){
             report {"response": respond_to_user(self.conversation_history), "source": []};
         }
-
+d
         # Lets walker traverse new search space 
         if (response.option == "@query@"){
-           temp = expand_query(response, self.conversation_history);
-            response = temp[0];
+            temp = expand_query(response, self.conversation_history);
+            best_email = temp[0];
             self.conversation_history = temp[1];
+            visit best_email;
         }
        
         # Select best initial email to traverse
@@ -147,10 +148,9 @@ walker ask_email {
         # Lets walker traverse new search space of new emails
         if (response.option == "@query@"){
             temp = expand_query(response, self.conversation_history);
-            response = temp[0];
+            best_email = temp[0];
             self.conversation_history = temp[1];
-            selected_email_node: Email = pick_best_email(received + sent, response.value);
-            visit selected_email_node;
+            visit best_email;
         }
 
         # Find next person to explore
@@ -205,8 +205,9 @@ walker ask_email {
         # Lets walker traverse new search space 
         if (response.option == "@query@"){
             temp = expand_query(response, self.conversation_history);
-            response = temp[0];
+            best_email = temp[0];
             self.conversation_history = temp[1];
+            visit best_email;
         }
 
         # Visit next Email 
