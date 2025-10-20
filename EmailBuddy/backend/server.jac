@@ -92,102 +92,127 @@ walker ask_email {
         
         response = choose_initial_email_node(str(initial_emails_formatted), self.conversation_history);
 
-        self.conversation_history.append({"type": "found-emails", "content": initial_emails_formatted});
-        self.conversation_history.append({"type": "tool-call-response", "content": str(response)});
-        self.conversation_history.append({"role": "user", "content": response.reasoning_for_choice});
+        summary = summarize(
+            convo_history           = self.conversation_history,
+            choice                 = str(response),
+            reasoning              = response.reasoning_for_choice,
+            options_to_choose_from = initial_emails_formatted
+            );
+        self.conversation_history.append({"role": "system", "content": summary});
 
-        if (response.choice != "@end@"){
-            initial_email: Email;
-            for email in initial_emails {
-                if(response.choice in email.subject){
-                    initial_email = email;
-                    break;
-                }
-            }
-            visit initial_email;
-        }
-        
-        report {"response": respond_to_user(self.conversation_history), "source": []};
-    }
-
-    can handle_email_node with Email entry {
-        sender: list[Person] = [<-- (`?Person) ];
-        sender_formatted: list[str] = [person_node_to_string(person) for person in sender];
-
-        recipients: list[Person] = [here --> (`?Person)];
-        recipients_formatted: list[str] = [person_node_to_string(person) for person in recipients];
-        
-        email_formatted: str = email_node_to_string(here);
-
-        response = choose_next_person_node(str(sender_formatted), str(recipients_formatted), email_formatted, self.conversation_history);
-
-        self.conversation_history.append({"type": "found-people", "content": f"Sender of current email: {sender_formatted}\n\n\nRecipient of current email: {recipients_formatted}"});
-        self.conversation_history.append({"type": "selected-person", "content": str(response)});
-        self.conversation_history.append({"role": "system", "content": response.reasoning_for_choice});
-        
-        if response.choice == "@end@" {
+        if (response.option == "@end@"){
             report {"response": respond_to_user(self.conversation_history), "source": []};
         }
 
+        # Lets walker traverse new search space 
+        if (response.option == "@query@"){
+           temp = expand_query(response, self.conversation_history);
+            response = temp[0];
+            self.conversation_history = temp[1];
+        }
+       
+        # Select best initial email to traverse
+        initial_email: Email = pick_best_email(initial_emails, response.value);
+        visit initial_email;
+        
+    }
 
+    can handle_email_node with Email entry {
+        """When an Email node is entered, have LLM decide which person to expand.""";
+
+        # Extract relevant info about current node to share to agent
+        sender: list[Person] = [<-- (`?Person) ];
+        sender_formatted: list[str] = [person_node_to_string(person) for person in sender];
+        recipients: list[Person] = [here --> (`?Person)];
+        recipients_formatted: list[str] = [person_node_to_string(person) for person in recipients];
+        email_formatted: str = email_node_to_string(here);
+
+        # Have agent choose next person
+        response = choose_next_person_node(str(sender_formatted), str(recipients_formatted), email_formatted, self.conversation_history);
+
+        # Update conversation history
+        summary = summarize(
+            convo_history           = self.conversation_history,
+            choice                 = str(response),
+            reasoning              = response.reasoning_for_choice,
+            options_to_choose_from = f"Sender of current email: {sender_formatted}\n\n\nRecipient of current email: {recipients_formatted}"
+            );
+        self.conversation_history.append({"role": "system", "content": summary});
+
+        # Check if query found answer
+        if response.option == "@end@" {
+            report {"response": respond_to_user(self.conversation_history), "source": []};
+        }
+
+        # Lets walker traverse new search space of new emails
+        if (response.option == "@query@"){
+            temp = expand_query(response, self.conversation_history);
+            response = temp[0];
+            self.conversation_history = temp[1];
+            selected_email_node: Email = pick_best_email(received + sent, response.value);
+            visit selected_email_node;
+        }
+
+        # Find next person to explore
         selected_person_node: Person;
-        for person in sent {
-            if(person.name == response.choice){
+        for person in sender {
+            print(f"\t- {person.name}");
+            if(person.name == response.value){
                 selected_person_node = person;
                 break;
             }
         }
-        for person in received {
-            if(person.name == response.choice){
+        for person in recipients {
+            print(f"\t- {person.name}");
+            if(person.name == response.value){
                 selected_person_node = person;
                 break;
             }
         }
 
+        # Traverse to next person
         visit selected_person_node;
-
     }
 
 
     can handle_person_node with Person entry {
-        
+        """When a Person node is entered, have LLM decide which email to expand.""";
+
         # Extract relevant info about current node to share to agent        
         sent: list[Email] = [<-- (`?Email) ];
         sent_formatted: list[str] = [email_node_to_string(email) for email in sent];
-        
         received: list[Email] = [here --> (`?Email)];
         received_formatted: list[str] = [email_node_to_string(email) for email in received];
-        
         person_formatted: str = person_node_to_string(here);
 
-        response = choose_next_person_node(person_formatted, str(sent_formatted), str(received_formatted), self.conversation_history);
+        # Have agent choose next email
+        response = choose_next_email_node(person_formatted, str(sent_formatted), str(received_formatted), self.conversation_history);
 
         # Update conversation history:
-        self.conversation_history.append({"type": "found-email", "content": f"Sent Emails: {sent_formatted}\n\n\nReceived: {received_formatted}"});
-        self.conversation_history.append({"type": "tool-call", "content": str(response)});
-        self.conversation_history.append({"role": "system", "content": response.reasoning_for_choice});
+        summary = summarize(
+            convo_history          = self.conversation_history,
+            choice                 = str(response),
+            reasoning              = response.reasoning_for_choice,
+            options_to_choose_from = f"Sent Emails: {sent_formatted}\n\n\nReceived: {received_formatted}"
+            );
+        self.conversation_history.append({"role": "system", "content": summary});
 
         # If no choice selected, disengage (or report?)
-        if response.choice == "@end@" {
+        if response.option == "@end@" {
             report {"response": respond_to_user(self.conversation_history), "source": []};
         }
         
-        
-        # Visit next Email 
-        selected_email_node: Email;
-        for email in sent {
-            if(email.subject in response.choice){
-                selected_email_node = email;
-                break;
-            }
-        }
-        for person in received {
-            if(email.subject == response.choice){
-                selected_email_node = email;
-                break;
-            }
+        # Lets walker traverse new search space 
+        if (response.option == "@query@"){
+            temp = expand_query(response, self.conversation_history);
+            response = temp[0];
+            self.conversation_history = temp[1];
         }
 
+        # Visit next Email 
+        selected_email_node: Email = pick_best_email(received + sent, response.value);
+
+        # Traverse to next email
         visit selected_email_node;
     }
 

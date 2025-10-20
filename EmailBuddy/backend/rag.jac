@@ -37,6 +37,24 @@ def create_email_embedding(jsonified_email: dict) -> None{
     conn.close();
 }
 
+def pick_best_email(emails: list[Email], target_text: str) -> Email{
+    best: Email = None;
+    score: float = 0.0;
+    model = sentence_transformers.SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2");
+    target_vector = np.array(model.encode([target_text])[0], dtype=np.float32);
+    email_vectors = np.array(model.encode([email_node_to_string(email) for email in emails]), dtype=np.float32);
+
+    for i in range(len(emails)) {
+        sim = cosine_similarity(target_vector, email_vectors[i]);
+        if sim > score {
+            best = emails[i];
+            score = sim;
+        }
+    }
+
+    return best;
+}
+
 def find_email_body(query: str, top_k: int=3) -> list[str] {
     conn: sqlite3.Connection = sqlite3.connect("vectorDB.db");
     cursor: sqlite3.Cursor  = conn.cursor();
