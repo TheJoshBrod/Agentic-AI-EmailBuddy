@@ -1,19 +1,20 @@
 """Contains all the helper walkers and tool calls."""
 
 
-import from byllm.llm { Model }
+import from byllm.llm { Model };
 include nodes;
 
 # glob llm = Model(model_name="ollama/llama3.2:latest", verbose=True);
 
-glob llm = Model(model_name="gemini/gemini-2.5-flash", verbose=True);
+# glob llm = Model(model_name="gemini/gemini-2.5-flash", verbose=True);
 
+glob llm = Model(model_name="openai/gpt-5", verbose=True);
 
 
 walker FindRecipientNodes{
-    has targets: list[str] = [];
+    has targets: list[tuple[str, str]] = [];
+    has missing: list[tuple[str, str]] = [];
     has persons: list[Person] = [];
-    has missing: list[str] = [];
 
     can start with `root entry {
         self.missing = self.targets;
@@ -22,15 +23,19 @@ walker FindRecipientNodes{
 
     can search with Person entry {
         
-        cleaned_name = normalize(here.name);
-        if cleaned_name in self.targets {
-            # Track found people, remove from missing list
-            self.persons.append(here);
-            self.missing = [name for name in self.missing if cleaned_name not in name];
+        # If node has an email in targets update tracker
+        for pair in self.targets {
+            if here.email == pair[1] {
+                self.persons.append(here);
+                self.missing.remove(pair);
+                break;
+            }
         }
+
         if len(self.missing) == 0 {
             disengage;
         }
+
         visit [-->];
     }
 }
@@ -45,8 +50,7 @@ walker FindSenderNode {
     }
 
     can search with Person entry {
-        if here.name == self.target {
-            self.found = True;
+        if here.email == self.target {
             self.person = here;
             disengage;
         }
@@ -55,29 +59,62 @@ walker FindSenderNode {
 }
 
 walker FindEmailNode{
-    has targets: list[str] = [];
+    has targets: list[str] = []; # [uuids]
     has emails: list[Email] = [];
+    has target_set: set[str] = {};
 
     can start with `root entry {
-        visit [-->];
-    }
+        self.target_set = set(self.targets);
 
-    can search with Email entry {   
-        if here.body in self.targets {
-            self.emails.append(here);
-        }
-        if len(self.emails) == len(self.targets) {
+        if len(self.target_set) == 0 {
             disengage;
         }
+
+        visit [--> (`?Email)];
+    }
+
+
+    can start with `Person entry {
+        self.target_set = set(self.targets);
+
+        if len(self.target_set) == 0 {
+            disengage;
+        }
+
+        visit [--> (`?Email)];
+    }
+
+    can search with Email entry {
+
+        # Search through all ids for this email, if found track node and pop uuid from search
+        if here.email_uuid in self.target_set {
+            self.emails.append(here);
+            self.target_set.remove(here.email_uuid); 
+        }
+
+        # If no more targets exit
+        if len(self.target_set) == 0 {
+            disengage;
+        }
+        
+        # Go to next Email node if 
         visit [-->];
     }
 }
 
-def normalize(email: str) -> str{
-    if "<" in email{
-        return email.split("<")[1].split(">")[0].strip();
+def normalize(email: str) -> tuple[str, str] {
+    name: str = "";
+    addr: str = "";
+
+    if "<" in email {
+        parts: list[str] = email.split("<");
+        name = parts[0].strip();
+        addr = parts[1].split(">")[0].strip();
+    } else {
+        addr = email.strip();
     }
-    return email.strip();
+
+    return (name, addr);
 }
 
 def email_node_to_string(email: Email) -> str{
@@ -85,9 +122,9 @@ def email_node_to_string(email: Email) -> str{
     output += "Subject:\n" + email.subject;
     output += "\nDate\n:" + email.date;
     output += "\n\nBody:\n" + email.body;
+    output += "\n\uuid:\n" + email.email_uuid;
     return output;
 }
-
 
 def person_node_to_string(person: Person) -> str{
     output: str = "";
@@ -99,8 +136,9 @@ def person_node_to_string(person: Person) -> str{
 
 
 obj Response{
-    has choice: str;
-    has reasoning_for_choice: str;
+    has option: str;
+    has selection: str;
+    has explanation: str;
 }
 
 """
@@ -112,13 +150,14 @@ conversation_history: previous prompts and responses
 
 Return:
 
-Choose the initial person to explore on graph with your thought process
-choice: <person being explored>, reasoning_for_choice: <reasoning>
+If you have a person to select:
+option: "@selected@", selection: <email address of person>, explanation: <reasoning for selection>
 
-OR
+Use this to fuzzy search ALL emails instead of the selecting one provided:
+option: "@query@", selection: <phrase to be vectorized>, explanation: <reasoning for new search>
 
 If you have an answer to the initial user prompt
-choice: "@end@", reasoning_for_choice: <Final response to display to user>
+option: "@end@", selection: <Answer you have concluded from options/conversation history>, explanation: <Why you stopped here>
 """
 def choose_next_person_node(senders: list[str], recipients: list[str], email: str, conversation_history: list[dict]) -> Response by llm();
 
@@ -130,13 +169,14 @@ conversation_history: previous prompts and responses
 
 Return:
 
-Choose the initial email to explore on graph with your thought process
-choice: <verbatim email subject>, reasoning_for_choice: <reasoning>
+If you have an email to select:
+option: "@selected@", selection: <verbatim email uuid>, explanation: <reasoning for selection>
 
-OR
+Use this to fuzzy search ALL emails instead of the selecting one provided:
+option: "@query@", selection: <phrase to be vectorized>, explanation: <reasoning for new search>
 
 If you have an answer to the initial user prompt
-choice: "@end@", reasoning_for_choice: <Final response to display to user>
+option: "@end@", selection: <Answer you have concluded from options/conversation history>, explanation: <Why you stopped here>
 """
 def choose_next_email_node(person: str, sent: list[str], received: list[str], conversation_history: list[dict]) -> Response by llm();
 
@@ -148,12 +188,13 @@ conversation_history: previous prompts and responses
 Return:
 
 Choose the initial email to explore on graph with your thought process
-choice: <verbatim email subject>, reasoning_for_choice: <reasoning>
+option: "@selected@", selection <verbatim email uuid>, explanation: <reasoning for selection>
 
-OR
+Use this to fuzzy search ALL emails instead of the selecting one provided:
+option: "@query@", selection: <phrase to be vectorized>, explanation: <reasoning for new search>
 
 If you have an answer to the initial user prompt
-choice: "@end@", reasoning_for_choice: <Final response to display to user>
+option: "@end@", selection: <Answer you have concluded from options/conversation history>, explanation: <Why you stopped here>
 """
 def choose_initial_email_node(emails: list[str], conversation_history: list[dict]) -> Response by llm();
 
@@ -161,4 +202,9 @@ def choose_initial_email_node(emails: list[str], conversation_history: list[dict
 """
 Answer the user's initial question with context given.
 """
-def respond_to_user(convo_history: dict[str,str]) -> str by llm();
+def respond_to_user(convo_history: list[dict]) -> str by llm();
+
+"""
+You failed to extract the identifier, try again.
+"""
+def retry_extract_identifier(convo_history: list[dict]) -> Response by llm();
