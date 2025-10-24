@@ -3,12 +3,13 @@ import sentence_transformers;
 import numpy as np;
 include nodes;
 
+model = sentence_transformers.SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2");
 
 def cosine_similarity(a: np.narray, b: np.narray) -> float{
     return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b));
 }
     
-def create_email_embedding(jsonified_email: dict) -> None{
+def create_email_embedding(jsonified_email: dict, email_uuid: str) -> None{
     conn: sqlite3.Connection = sqlite3.connect("vectorDB.db");
     cursor: sqlite3.Cursor = conn.cursor();
 
@@ -16,6 +17,7 @@ def create_email_embedding(jsonified_email: dict) -> None{
     CREATE TABLE IF NOT EXISTS emails (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         content TEXT NOT NULL,
+        email_uuid TEXT NOT NULL,
         embedding BLOB
     )
     """);
@@ -26,43 +28,41 @@ def create_email_embedding(jsonified_email: dict) -> None{
     subject: str = jsonified_email["subject"];
     body: str = jsonified_email["body"];
 
-    model = sentence_transformers.SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2");
     email = f"date: <{date}>\nsender: <{sender}>\nrecipient: <{recipients}>\nsubject: <{subject}>\n\nbody:<{body}>";
     embeddings = model.encode([email])[0];
     embedding = np.array(embeddings, dtype=np.float32);
     embedding_blob = embedding.tobytes();
 
-    cursor.execute("INSERT INTO emails (content, embedding) VALUES (?, ?)", (body, embedding_blob));
+    cursor.execute("INSERT INTO emails (content, email_uuid, embedding) VALUES (?, ?, ?)", (email, email_uuid, embedding_blob));
     conn.commit();
     conn.close();
 }
 
-def find_email_body(query: str, top_k: int=3) -> list[str] {
+def find_emails(query: str, top_k: int=10) -> list[tuple[str, str, float]]: {
     conn: sqlite3.Connection = sqlite3.connect("vectorDB.db");
     cursor: sqlite3.Cursor  = conn.cursor();
 
-    model = sentence_transformers.SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2");
     query_embedding = model.encode([query])[0];
     query_embedding = np.array(query_embedding, dtype=np.float32);
 
-    cursor.execute("SELECT id, content, embedding FROM emails");
+    cursor.execute("SELECT email_uuid, content, embedding FROM emails");
     rows = cursor.fetchall();
 
     results = [];
 
     for row in rows {
-        row_id = row[0];
+        email_uuid = row[0];
         content = row[1];
         embedding_blob = row[2];
         embedding = np.frombuffer(embedding_blob, dtype=np.float32);
         sim = cosine_similarity(query_embedding, embedding);
-        results.append((row_id, content, sim));
+        results.append((email_uuid, content, sim));
     }
-        
+
     conn.close();
 
     results.sort(key=lambda x: tuple: x[2], reverse=True);
 
-    most_likely_emails: list = [result[1] for result in results];
-    return most_likely_emails[:top_k];
+    results.sort(key=lambda x: x[2], reverse=True);
+    return results[:top_k];
 }
