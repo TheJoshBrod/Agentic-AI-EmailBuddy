@@ -18,6 +18,7 @@ walker FindRecipientNodes{
     has persons: list[Person] = [];
 
     can start with `root entry {
+        self.persons: list[Person] = [];
         self.missing = self.targets;
         visit [-->];
     }
@@ -62,7 +63,7 @@ walker FindSenderNode {
 walker FindEmailNode{
     has targets: list[str] = []; # [uuids]
     has emails: list[EmailNode] = [];
-    has target_set: set[str] = {};
+    has target_set: set[str] = set();
 
     can start with `root entry {
         print("Started in root");
@@ -84,6 +85,7 @@ walker FindEmailNode{
             disengage;
         }
 
+        print([--> (`?EmailNode)]);
         visit [--> (`?EmailNode)];
     }
 
@@ -101,7 +103,7 @@ walker FindEmailNode{
         }
         
         # Go to next Email node if 
-        visit [-->];
+        visit [<--];
     }
 }
 
