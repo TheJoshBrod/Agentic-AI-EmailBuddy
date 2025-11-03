@@ -1,22 +1,37 @@
-walker get_attached_nodes {
+# public graph access
+glob public_api_key: str = "123456"; # change this to your own api key
+
+walker validate_api_key {
+    has api_key: str = "";
+    obj __specs__ {
+        static has auth: bool = False;  # Skip auto endpoint generation from walker
+    }
+    can validate_api_key with `root entry {     
+        if(self.api_key == public_api_key) {
+            report True;
+        } else {
+            report False;
+        }
+    }
+}
+
+walker get_public_nodes {
     has node_id: str = "";
-    can get_attach_nodes with `root entry {
+    has api_key: str = "";
+    obj __specs__ {
+        static has auth: bool = False;  
+    }
+    can get_public_nodes with `root entry {
+        if(self.api_key != public_api_key) {
+            raise "Invalid API key";
+            disengage;
+        }
         if(self.node_id == "") {
             report jid(here);
         } else {
             selected_node = &self.node_id;
             attached_nodes = [selected_node-->];
             report attached_nodes;
-        }
-    }
-}
-
-walker update_node_data {
-    has node_id: str = "";
-    has node_data: dict = {};
-    can update_node_data with `root entry {
-        selected_node = &self.node_id;
-        selected_node.__dict__.update(self.node_data);
-        report selected_node;
+        }  
     }
 }

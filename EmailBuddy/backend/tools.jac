@@ -37,8 +37,6 @@ walker FindRecipientNodes{
         if len(self.missing) == 0 {
             disengage;
         }
-
-        visit [-->];
     }
 }
 
@@ -56,7 +54,6 @@ walker FindSenderNode {
             self.person = here;
             disengage;
         }
-        visit [-->];
     }    
 }
 
@@ -66,9 +63,7 @@ walker FindEmailNode{
     has target_set: set[str] = set();
 
     can start with `root entry {
-        print("Started in root");
         self.target_set = set(self.targets);
-        print(self.target_set);
         if len(self.target_set) == 0 {
             disengage;
         }
@@ -77,20 +72,18 @@ walker FindEmailNode{
     }
 
     can startPerson with Person entry {
-        print("Started in person");
-        print(here.name);
         self.target_set = set(self.targets);
 
         if len(self.target_set) == 0 {
             disengage;
         }
 
-        print([--> (`?EmailNode)]);
-        visit [--> (`?EmailNode)];
+        for email in [--> (`?EmailNode)]{
+            visit email;
+        }
     }
 
     can search with EmailNode entry {
-
         # Search through all ids for this email, if found track node and pop uuid from search
         if here.email_uuid in self.target_set {
             self.emails.append(here);
@@ -101,9 +94,6 @@ walker FindEmailNode{
         if len(self.target_set) == 0 {
             disengage;
         }
-        
-        # Go to next Email node if 
-        visit [<--];
     }
 }
 
