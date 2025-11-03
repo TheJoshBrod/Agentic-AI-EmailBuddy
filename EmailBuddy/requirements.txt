@@ -1,5 +1,4 @@
-jaclang
+jaseci
 byllm
-sqlite3
 sentence_transformers
 numpy
