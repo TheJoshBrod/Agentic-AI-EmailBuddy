@@ -5,10 +5,6 @@ import from byllm.llm { Model }
 include nodes;
 include rag;
 
-# glob llm = Model(model_name="ollama/llama3.2:latest", verbose=True);
-
-# glob llm = Model(model_name="gemini/gemini-2.5-flash", verbose=True);
-
 glob llm = Model(model_name="openai/gpt-5", verbose=True);
 
 
