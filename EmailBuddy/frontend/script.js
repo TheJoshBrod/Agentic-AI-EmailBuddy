@@ -75,7 +75,7 @@ $(document).ready(function() {
                 query: message,       // send the user’s text
                 raw_emails: jsonData  // keep the email data too
             }),
-            timeout: 30000,
+            timeout: 300000,
             success: function(response) {
                 $typing.hide();
                 const reply = response.reports[0].response || 'Error.';
