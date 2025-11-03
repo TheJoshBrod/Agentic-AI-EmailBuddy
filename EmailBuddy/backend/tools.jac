@@ -1,8 +1,9 @@
 """Contains all the helper walkers and tool calls."""
 
 
-import from byllm.llm { Model };
+import from byllm.llm { Model }
 include nodes;
+include rag;
 
 # glob llm = Model(model_name="ollama/llama3.2:latest", verbose=True);
 
@@ -60,31 +61,33 @@ walker FindSenderNode {
 
 walker FindEmailNode{
     has targets: list[str] = []; # [uuids]
-    has emails: list[Email] = [];
+    has emails: list[EmailNode] = [];
     has target_set: set[str] = {};
 
     can start with `root entry {
+        print("Started in root");
+        self.target_set = set(self.targets);
+        print(self.target_set);
+        if len(self.target_set) == 0 {
+            disengage;
+        }
+
+        visit [--> (`?EmailNode)];
+    }
+
+    can startPerson with Person entry {
+        print("Started in person");
+        print(here.name);
         self.target_set = set(self.targets);
 
         if len(self.target_set) == 0 {
             disengage;
         }
 
-        visit [--> (`?Email)];
+        visit [--> (`?EmailNode)];
     }
 
-
-    can start with `Person entry {
-        self.target_set = set(self.targets);
-
-        if len(self.target_set) == 0 {
-            disengage;
-        }
-
-        visit [--> (`?Email)];
-    }
-
-    can search with Email entry {
+    can search with EmailNode entry {
 
         # Search through all ids for this email, if found track node and pop uuid from search
         if here.email_uuid in self.target_set {
@@ -117,7 +120,7 @@ def normalize(email: str) -> tuple[str, str] {
     return (name, addr);
 }
 
-def email_node_to_string(email: Email) -> str{
+def email_node_to_string(email: EmailNode) -> str{
     output: str = "";
     output += "Subject:\n" + email.subject;
     output += "\nDate\n:" + email.date;
@@ -133,7 +136,6 @@ def person_node_to_string(person: Person) -> str{
 }
 
 # Handles all Agentic selection
-
 
 obj Response{
     has option: str;
@@ -153,7 +155,7 @@ Return:
 If you have a person to select:
 option: "@selected@", selection: <email address of person>, explanation: <reasoning for selection>
 
-Use this to fuzzy search ALL emails instead of the selecting one provided:
+Use this to fuzzy search ALL emails instead of the selecting one provided (only call this if at a deadend):
 option: "@query@", selection: <phrase to be vectorized>, explanation: <reasoning for new search>
 
 If you have an answer to the initial user prompt
@@ -172,7 +174,7 @@ Return:
 If you have an email to select:
 option: "@selected@", selection: <verbatim email uuid>, explanation: <reasoning for selection>
 
-Use this to fuzzy search ALL emails instead of the selecting one provided:
+Use this to fuzzy search ALL emails instead of the selecting one provided (only call this if at a deadend):
 option: "@query@", selection: <phrase to be vectorized>, explanation: <reasoning for new search>
 
 If you have an answer to the initial user prompt
@@ -190,7 +192,7 @@ Return:
 Choose the initial email to explore on graph with your thought process
 option: "@selected@", selection <verbatim email uuid>, explanation: <reasoning for selection>
 
-Use this to fuzzy search ALL emails instead of the selecting one provided:
+Use this to fuzzy search ALL emails instead of the selecting one provided (only call this if at a deadend):
 option: "@query@", selection: <phrase to be vectorized>, explanation: <reasoning for new search>
 
 If you have an answer to the initial user prompt
@@ -208,3 +210,8 @@ def respond_to_user(convo_history: list[dict]) -> str by llm();
 You failed to extract the identifier, try again.
 """
 def retry_extract_identifier(convo_history: list[dict]) -> Response by llm();
+
+"""
+Summarize relevant part of each option to the initial query not in current conversation history
+"""
+def summarize(presented_option: list[str], convo_history: list[dict]) -> str by llm();

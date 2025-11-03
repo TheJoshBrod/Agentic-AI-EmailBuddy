@@ -3,7 +3,7 @@ import sentence_transformers;
 import numpy as np;
 include nodes;
 
-model = sentence_transformers.SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2");
+glob model = sentence_transformers.SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2");
 
 def cosine_similarity(a: np.narray, b: np.narray) -> float{
     return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b));
@@ -38,7 +38,7 @@ def create_email_embedding(jsonified_email: dict, email_uuid: str) -> None{
     conn.close();
 }
 
-def find_emails(query: str, top_k: int=10) -> list[tuple[str, str, float]]: {
+def find_emails(query: str, top_k: int=10) -> list[tuple[str, str, float]] {
     conn: sqlite3.Connection = sqlite3.connect("vectorDB.db");
     cursor: sqlite3.Cursor  = conn.cursor();
 
@@ -63,6 +63,5 @@ def find_emails(query: str, top_k: int=10) -> list[tuple[str, str, float]]: {
 
     results.sort(key=lambda x: tuple: x[2], reverse=True);
 
-    results.sort(key=lambda x: x[2], reverse=True);
     return results[:top_k];
 }
