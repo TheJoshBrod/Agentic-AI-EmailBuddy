@@ -5,7 +5,9 @@ node Person{
     has email: str;
 }
 
-node Email{
+node EmailNode{
+    has sender: str;
+    has recipients: str;
     has date: str;
     has subject: str;
     has body: str;

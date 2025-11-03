@@ -3,11 +3,13 @@
 # Python Libraries
 import json;
 import uuid;
+import typing;
 
 # Jac Files
 include tools;
 include nodes;
 include rag;
+include prompts;
 
 
 walker upload_emails{
@@ -19,16 +21,18 @@ walker upload_emails{
 
     can upload_email with `root entry{
 
-        # for child in [root -->] {
-        #     del child;
-        # }
+        print(f"Existing nodes {len([root -->])}");
+        for child in [root -->] {
+            del child;
+        }
+        print(f"Existing nodes {len([root -->])}");
 
         emails: list = self.raw_emails;
         for msg in emails {
 
             # Generate uuid for email (useful for retrieval later)
-            stable_key = f"{msg.get('from','')}-{msg.get('date','')}-{msg.get('subject','')}-{msg.get('body','')}";
-            email_uuid = uuid.uuid3(uuid.NAMESPACE_DNS, stable_key);
+            stable_key: str = f"{msg.get('from','')}-{msg.get('date','')}-{msg.get('subject','')}-{msg.get('body','')}";
+            email_uuid = str(uuid.uuid3(uuid.NAMESPACE_DNS, stable_key));
 
             # -----------------------
             # - HANDLE EMAIL SENDER -
@@ -36,14 +40,15 @@ walker upload_emails{
             
             # Extract sender info
             sender_raw = msg.get("from", "");
-            if not sender_raw:
+            if not sender_raw{
                 continue;
+            }
             response = normalize(sender_raw);
             name = response[0];
-            email = response[1]; 
+            sender_email = response[1]; 
 
             # Spawn walker to check if sender node already exists
-            FindSend = FindSenderNode(target=email);
+            FindSend = FindSenderNode(target=sender_email);
             root spawn FindSend;
 
             # Check if sender (person node) found
@@ -52,11 +57,11 @@ walker upload_emails{
                 # If it exists set to existing node
                 if sender.name == "" and name != "" {
                     sender.name = name;
-                }    
+                }
             }
             else{
                 # else create new node connected to root
-                sender = Person(name=name, email=email);
+                sender = Person(name=name, email=sender_email);
                 root ++> sender;            
             }
 
@@ -67,8 +72,9 @@ walker upload_emails{
 
             # Extract recipient information
             recipient_raw = msg.get("to", "");
-            if not recipient_raw:
+            if not recipient_raw{
                 continue;
+            }
             email_list = recipient_raw.split(", ");
             email_list = [normalize(email) for email in email_list];
 
@@ -118,7 +124,7 @@ walker upload_emails{
             }
 
             # Create new Email node
-            email = Email(date=msg["date"], subject=msg["subject"], body=msg["body"], email_uuid=email_uuid);
+            email = EmailNode(sender=sender_raw, recipients=recipient_raw, date=msg["date"], subject=msg["subject"], body=msg["body"], email_uuid=email_uuid);
             root ++> email;
 
             # Link sender to email
@@ -132,6 +138,10 @@ walker upload_emails{
             # Generate embedding for the email content
             create_email_embedding(msg, email_uuid);
         }
+        for child in [root -->] {
+            print(child);
+            print(f"\t{[child -->]}");
+        }
     }
 }
 
@@ -142,20 +152,120 @@ walker ask_email {
     obj __specs__ {
         static has auth: bool = False;
     }
-    
-    
-    can handle_email_query(query: str) -> None;
+
+    def handle_email_query(query: str) -> None {
+        # Initialized vars
+        initial_emails: list[EmailNode] = [];
+        option: str = "@query@";
+
+        # Loops until finds satisfiable email to explore
+        query_counter: int = 0;
+        while option == "@query@" and query_counter < 4 {
+
+            # Prevents infinite looping
+            query_counter += 1;
+            
+            # Get starting nodes of emails to explore
+            starting_emails: tuple[str] = find_emails(query);
+            uuids: list[str] = [email[0] for email in starting_emails];
+            FindEmails = FindEmailNode(targets=uuids);
+            root spawn FindEmails;
+
+            # Choose which email to travel to
+            initial_emails = FindEmails.emails;
+            initial_emails_formatted: list[str] = [email_node_to_string(email) for email in initial_emails];
+
+            # Update findings to conversation history
+            self.conversation_history.append({
+                "type": "found-emails", 
+                "content": summarize(initial_emails_formatted, self.conversation_history)
+            });
+
+            response = choose_initial_email_node(str(initial_emails_formatted), self.conversation_history);
+
+            # Log the agent's choice and reasoning
+            self.conversation_history.append({
+                "type": "agent-choice",
+                "content": f"Based on the found emails, I will proceed with option '{response.option}'. My selection is '{response.selection}' because: {response.explanation}"
+            });
+
+            # Extract relevant information
+            query = response.selection;
+            option = response.option;
+        }
+        if (response.option == "@end@"){
+            # If got answer from initial search, respond with answer
+            # TODO: Separate answer function?
+            return respond_to_user(self.conversation_history);            
+        }
+        elif response.option == "@selected@" or query_counter == 4 {
+
+            # Select next email based on uuid
+            selected_email_node: EmailNode = None;
+            for email in initial_emails {
+                if(email.email_uuid == response.selection){
+                    selected_email_node = email;
+                    break;
+                }
+            }
+
+            # If next email not found, try again 4 more times (5 total)
+            selected_counter: int = 0;
+            while selected_email_node is None and selected_counter < 4 {
+                self.conversation_history.append({"type": "meta-error", "content": "Email UUID did not verbatim match. Retrying selection."});
+                response = retry_extract_identifier(self.conversation_history);
+
+                self.conversation_history.append({
+                    "type": "agent-retry-choice", 
+                    "content": f"My new selection is '{response.selection}' because: {response.explanation}"
+                });
+                for email in initial_emails {
+                    if(email.email_uuid == response.selection){
+                        selected_email_node = email;
+                        break;
+                    }
+                }
+                selected_counter += 1;
+            }
+
+            # Exits if still not found
+            if selected_email_node is None {
+                return "Error during email search please try again";
+            }
+            
+            # Goto next Email 
+            return selected_email_node;
+        }
+        else{
+            # This should never happen.
+            return "Error during email search please try again";
+        }
+    }
+
 
     can handle_query with `root entry{
 
         # Initialize conversation history
+        self.conversation_history.append({"role": "system_prompt", "content": sys_prompt});
+        print("\n\n\n\n\n\n\n");
+        print(sys_prompt);
         self.conversation_history.append({"role": "user", "content": self.query});
 
         # Start email search
-        handle_email_query(query);
+        value = self.handle_email_query(self.query);
+        print(f"\n\n\n\n\n\n\nroot: {type(value)}");
+        if type(value) == str {
+            report {"response": value, "source": []};
+        }
+        elif type(value) == EmailNode {
+            visit value;
+        }
+        else {
+            report {"response": "Error", "source": []};
+        }
     }
 
-    can handle_email_node with Email entry {
+    can handle_email_node with EmailNode entry {
         
         # Extract sender of email, recipients of email, body/date/subject of email (nodes and str)
         sender: list[Person] = [here <-- (`?Person) ];
@@ -170,21 +280,27 @@ walker ask_email {
         # Merges people into one list for later search
         search_pool: list[Person] = sender + recipients;
 
+        self.conversation_history.append({
+            "type": "found-people-at-email", 
+            "content": f"At email {email_formatted}. Found sender: {str(sender_formatted)} and recipients: {str(recipients_formatted)}."
+        });
+
 
         # Choose next person node to explore
         response = choose_next_person_node(str(sender_formatted), str(recipients_formatted), email_formatted, self.conversation_history);
 
         # Update findings to conversation history
-        self.conversation_history.append({"type": "found-people", "content": f"Sender of current email: {sender_formatted}\n\n\nRecipient of current email: {recipients_formatted}"});
-        self.conversation_history.append({"type": "selected-person", "content": str(response.selection)});
-        self.conversation_history.append({"role": "system", "content": response.explanation});
+        self.conversation_history.append({
+            "type": "agent-choice", 
+            "content": f"I am acting on '{response.option}'. I picked '{response.selection}' because: {response.explanation}"
+        });
 
         # Handle next actions:
         if response.option == "@end@" {
             # If got answer from initial search, respond with answer
             report {"response": respond_to_user(self.conversation_history), "source": []};            
         }
-        else if response.option == "@selected@" {
+        elif response.option == "@selected@" {
             # Select next person based on email address
             selected_person_node: Person = None;
             for person in search_pool {
@@ -197,10 +313,12 @@ walker ask_email {
             # if selected person not found, retry 4 times (5 total)
             counter: int = 0;
             while selected_person_node is None and counter < 4 {
-                self.conversation_history.append({"type": "meta-error", "content": "email address did not verbatim match try again"})
-                response = choose_next_person_node(str(sender_formatted), str(recipients_formatted), email_formatted, self.conversation_history);
-                self.conversation_history.append({"type": "selected", "content": str(response.selection)});
-                self.conversation_history.append({"role": "system", "content": response.explanation});
+                self.conversation_history.append({"type": "meta-error", "content": "Email address did not verbatim match. Retrying selection."});
+                response = choose_next_person_node(str(sender_formatted), str(recipients_formatted), email_formatted, self.conversation_history);        
+                self.conversation_history.append({
+                    "type": "agent-retry-choice", 
+                    "content": f"I am acting on '{response.option}'. My new selection is '{response.selection}' because: {response.explanation}"
+                });
                 for person in search_pool {
                     if(person.email == response.selection){
                         selected_person_node = person;
@@ -218,9 +336,16 @@ walker ask_email {
             # Goto next Person             
             visit selected_person_node;
         }
-        else if (response.option == "@query@"){
+        elif (response.option == "@query@"){
             # Queries other emails using fuzzy vector search
-            handle_email_query(response.selection);     
+            value = self.handle_email_query(response.selection);
+            print(f"\n\n\n\n\n\n\nemail: {type(value)}");
+            if type(value) == str {
+                report {"response": value, "source": []};
+            }
+            else{
+                visit value;
+            } 
         }
         else{
             # This should never happen.
@@ -231,34 +356,67 @@ walker ask_email {
 
     can handle_person_node with Person entry {
         
-        # Extract relevant info about current node to share to agent        
-        sent: list[Email] = [here --> (`?Email)];
+        # Extract relevant info about current node to share to agent        
+        sent: list[EmailNode] = [here --> (`?EmailNode)];
         sent_formatted: list[str] = [email_node_to_string(email) for email in sent];
         
-        received: list[Email] = [here <-- (`?Email)];
+        received: list[EmailNode] = [here <-- (`?EmailNode)];
         received_formatted: list[str] = [email_node_to_string(email) for email in received];
         
-        search_pool: list[Email] = sent + received; 
+        search_pool: list[EmailNode] = sent + received; 
 
         person_formatted: str = person_node_to_string(here);
 
+        # --- FIX 1: ADDED THIS "FINDINGS" BLOCK ---
+        self.conversation_history.append({
+            "type": "found-emails-for-person",
+            "content": f"At person {person_formatted}. Found sent emails: {str(sent_formatted)} and received emails: {str(received_formatted)}."
+        });
+
         response = choose_next_email_node(person_formatted, str(sent_formatted), str(received_formatted), self.conversation_history);
 
-        # Update conversation history:
-        self.conversation_history.append({"type": "found-email", "content": f"Sent Emails: {sent_formatted}\n\n\nReceived: {received_formatted}"});
-        self.conversation_history.append({"type": "selected", "content": str(response.selection)});
-        self.conversation_history.append({"role": "system", "content": response.explanation});
+        # --- FIX 2: REMOVED THE LOG THAT WAS HERE ---
+        # (You had a log here with type "agent-retry-choice", which was incorrect)
+
 
         if response.option == "@end@" {
+            
+            # Update conversation history:
+            # (This log is correct)
+            self.conversation_history.append({
+                "type": "agent-choice", 
+                "content": f"I am ending the search. The answer is '{response.selection}' because: {response.explanation}"
+            });
+
             report {"response": respond_to_user(self.conversation_history), "source": []};
         }
-        else if response.option == "@query@" {
-            handle_email_query(response.selection);     
+        elif response.option == "@query@" {
+            
+            # Update conversation history:
+            self.conversation_history.append({
+                "type": "agent-choice", 
+                "content": f"I am starting a new query for '{response.selection}' because: {response.explanation}"
+            });
+
+            value = self.handle_email_query(response.selection);
+            
+            if type(value) == str {
+                report {"response": value, "source": []};
+            }
+            else{
+                visit value;
+            }
         }
-        else if response.option == "@selected@" {
+        elif response.option == "@selected@" {
+
+            # (This log is correct)
+            self.conversation_history.append({
+                "type": "agent-choice", 
+                "content": f"I am selecting email '{response.selection}' because: {response.explanation}"
+            });
             
             # Select next email based on date
-            selected_email_node: Email = None;
+            selected_email_node: EmailNode = None;
             for email in search_pool {
                 if(email.email_uuid == response.selection){
                     selected_email_node = email;
@@ -269,10 +427,16 @@ walker ask_email {
             # If next email not found, try again 4 more times (5 total)
             counter: int = 0;
             while selected_email_node is None and counter < 4 {
-                self.conversation_history.append({"type": "meta-error", "content": "email uuid did not verbatim match try again"})
+                self.conversation_history.append({"type": "meta-error", "content": "email uuid did not verbatim match try again"});
                 response = choose_next_email_node(person_formatted, str(sent_formatted), str(received_formatted), self.conversation_history);
-                self.conversation_history.append({"type": "selected", "content": str(response.selection)});
-                self.conversation_history.append({"role": "system", "content": response.explanation});
+                
+                # --- FIX 3: CORRECTED THIS LOG BLOCK ---
+                # Changed type from "select-email" to "agent-retry-choice"
+                self.conversation_history.append({
+                    "type": "agent-retry-choice", 
+                    "content": f"I am acting on '{response.option}'. My new selection is '{response.selection}' because: {response.explanation}"
+                });
+            
                 for email in search_pool {
                     if(email.email_uuid == response.selection){
                         selected_email_node = email;
