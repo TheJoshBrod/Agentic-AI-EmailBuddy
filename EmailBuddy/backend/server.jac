@@ -10,7 +10,7 @@ include tools;
 include nodes;
 include rag;
 include prompts;
-
+include jaclens;
 
 walker upload_emails{
     has raw_emails: list;
@@ -33,13 +33,15 @@ walker upload_emails{
             # Generate uuid for email (useful for retrieval later)
             stable_key: str = f"{msg.get('from','')}-{msg.get('date','')}-{msg.get('subject','')}-{msg.get('body','')}";
             email_uuid = str(uuid.uuid3(uuid.NAMESPACE_DNS, stable_key));
-
+            with open("file.txt", "a") as f{
+                f.write(email_uuid + "\t" + stable_key + "\n");
+            }
             # -----------------------
             # - HANDLE EMAIL SENDER -
             # -----------------------
             
             # Extract sender info
-            sender_raw = msg.get("from", "");
+            sender_raw: str = msg.get("from", "");
             if not sender_raw{
                 continue;
             }
