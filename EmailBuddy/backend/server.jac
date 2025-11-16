@@ -186,7 +186,6 @@ walker ask_email {
         }
         if (response.option == "@end@"){
             # If got answer from initial search, respond with answer
-            # TODO: Separate answer function?
             return respond_to_user(conversation_history);            
         }
         elif response.option == "@selected@" or query_counter == 4 {
@@ -354,7 +353,6 @@ walker ask_email {
 
         person_formatted: str = person_node_to_string(here);
 
-        # --- FIX 1: ADDED THIS "FINDINGS" BLOCK ---
         conversation_history.append({
             "type": "found-emails-for-person",
             "content": f"At person {person_formatted}. Found sent emails: {str(sent_formatted)} and received emails: {str(received_formatted)}."
@@ -362,14 +360,9 @@ walker ask_email {
 
         response = choose_next_email_node(person_formatted, str(sent_formatted), str(received_formatted), conversation_history);
 
-        # --- FIX 2: REMOVED THE LOG THAT WAS HERE ---
-        # (You had a log here with type "agent-retry-choice", which was incorrect)
-
 
         if response.option == "@end@" {
             
-            # Update conversation history:
-            # (This log is correct)
             conversation_history.append({
                 "type": "agent-choice", 
                 "content": f"I am ending the search. The answer is '{response.selection}' because: {response.explanation}"
@@ -379,7 +372,6 @@ walker ask_email {
         }
         elif response.option == "@query@" {
             
-            # Update conversation history:
             conversation_history.append({
                 "type": "agent-choice", 
                 "content": f"I am starting a new query for '{response.selection}' because: {response.explanation}"
@@ -396,13 +388,11 @@ walker ask_email {
         }
         elif response.option == "@selected@" {
 
-            # (This log is correct)
             conversation_history.append({
                 "type": "agent-choice", 
                 "content": f"I am selecting email '{response.selection}' because: {response.explanation}"
             });
             
-            # Select next email based on date
             selected_email_node: EmailNode = None;
             for email in search_pool {
                 if(email.email_uuid == response.selection){
@@ -417,8 +407,6 @@ walker ask_email {
                 conversation_history.append({"type": "meta-error", "content": "email uuid did not verbatim match try again"});
                 response = choose_next_email_node(person_formatted, str(sent_formatted), str(received_formatted), conversation_history);
                 
-                # --- FIX 3: CORRECTED THIS LOG BLOCK ---
-                # Changed type from "select-email" to "agent-retry-choice"
                 conversation_history.append({
                     "type": "agent-retry-choice", 
                     "content": f"I am acting on '{response.option}'. My new selection is '{response.selection}' because: {response.explanation}"
