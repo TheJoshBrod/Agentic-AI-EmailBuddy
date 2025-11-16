@@ -2,3 +2,4 @@ jaseci
 byllm
 sentence_transformers
 numpy
+sqlite-vec
