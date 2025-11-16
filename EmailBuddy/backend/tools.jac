@@ -131,23 +131,17 @@ obj Response{
     has explanation: str;
 }
 
+sem Response = "Structured response used by an agentic traversal logic.";
+sem Response.option = "A control token defining action: @selected@ (select traversal node), @query@ (phrase for semantic search query), or @end@.";
+sem Response.selection = "The chosen email-address, email-uuid, search query, or final response.";
+sem Response.explanation = "A short justification for why this decision was made.";
+
+
 """
 senders: List of people who sent the email
 recipients: List of people who received the email
 email: Content of the email itself in question
 conversation_history: previous prompts and responses
-
-
-Return:
-
-If you have a person to select:
-option: "@selected@", selection: <email address of person>, explanation: <reasoning for selection>
-
-Use this to fuzzy search ALL emails instead of the selecting one provided (only call this if at a deadend):
-option: "@query@", selection: <phrase to be vectorized>, explanation: <reasoning for new search>
-
-If you have an answer to the initial user prompt
-option: "@end@", selection: <Answer you have concluded from options/conversation history>, explanation: <Why you stopped here>
 """
 def choose_next_person_node(senders: list[str], recipients: list[str], email: str, conversation_history: list[dict]) -> Response by llm();
 
@@ -156,17 +150,6 @@ person: Person who is being explored
 sent: List of emails this person has sent
 received: List of emails this person has received
 conversation_history: previous prompts and responses
-
-Return:
-
-If you have an email to select:
-option: "@selected@", selection: <verbatim email uuid>, explanation: <reasoning for selection>
-
-Use this to fuzzy search ALL emails instead of the selecting one provided (only call this if at a deadend):
-option: "@query@", selection: <phrase to be vectorized>, explanation: <reasoning for new search>
-
-If you have an answer to the initial user prompt
-option: "@end@", selection: <Answer you have concluded from options/conversation history>, explanation: <Why you stopped here>
 """
 def choose_next_email_node(person: str, sent: list[str], received: list[str], conversation_history: list[dict]) -> Response by llm();
 
@@ -174,17 +157,6 @@ def choose_next_email_node(person: str, sent: list[str], received: list[str], co
 """
 emails: initial emails found with vector search 
 conversation_history: previous prompts and responses
-
-Return:
-
-Choose the initial email to explore on graph with your thought process
-option: "@selected@", selection <verbatim email uuid>, explanation: <reasoning for selection>
-
-Use this to fuzzy search ALL emails instead of the selecting one provided (only call this if at a deadend):
-option: "@query@", selection: <phrase to be vectorized>, explanation: <reasoning for new search>
-
-If you have an answer to the initial user prompt
-option: "@end@", selection: <Answer you have concluded from options/conversation history>, explanation: <Why you stopped here>
 """
 def choose_initial_email_node(emails: list[str], conversation_history: list[dict]) -> Response by llm();
 
