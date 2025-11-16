@@ -22,7 +22,7 @@ walker upload_emails{
     }
 
     can upload_email with `root entry{
-        for msg in emails {
+        for msg in self.raw_emails {
 
             # Generate uuid for email (useful for retrieval later)
             stable_key: str = f"{msg.get('from','')}-{msg.get('date','')}-{msg.get('subject','')}-{msg.get('body','')}";
