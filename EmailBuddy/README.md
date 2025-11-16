@@ -52,6 +52,13 @@ The system consists of:
      ```
    - To use a different LLM (like Ollama, Gemini, or Claude), modify the `glob llm` line in `backend/tools.jac`
 
+5. **Set up sqlite-vec**
+   - Download and install latest version of [sqlite-vec](https://github.com/asg017/sqlite-vec) and move your OS's correct file into `backend/`
+      - WSL/Linux: vec0.so
+      - Mac: vec0.dylib
+      - Windows: vec0.dll
+   - Replace all instances of the filename `vec0.so` in `backend/rag.jac` with the proper file you downloaded from above
+
 ## How to Run
 
 ### 1. Start the Jaseci Server
