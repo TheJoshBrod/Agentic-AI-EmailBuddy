@@ -4,6 +4,128 @@ This page documents significant breaking changes in Jac and Jaseci that may affe
 
 ## Latest Breaking Changes
 
+MTLLM library is now deprecated and replaced by the byLLM package. In all place where `mtllm` was used before can be replaced with `byllm`.
+
+### Version 0.9.4
+
+#### 1. `let` Keyword Removed - Use Direct Assignment
+
+The `let` keyword has been removed from Jaclang. Variable declarations now use direct assignment syntax, aligning with Python's approach to variable binding.
+
+**Before**
+
+```jac
+with entry {
+    let x = 10;
+    let name = "Alice";
+    let [count, setCount] = useState(0);
+}
+```
+
+**After**
+
+```jac
+with entry {
+    x = 10;
+    name = "Alice";
+    [count, setCount] = useState(0);
+}
+```
+
+**Key Changes:**
+- Remove the `let` keyword from all variable declarations
+- Use direct assignment (`x = value`) instead of `let x = value`
+- This applies to all contexts including destructuring assignments
+
+### Version 0.8.10
+
+#### 1. byLLM Imports Moved to `byllm.lib`
+
+All byLLM exports have been moved under the `byllm.lib` module to enable lazy loading and faster startup. Direct imports from `byllm` are removed.
+
+
+**Before**
+
+```jac
+import from byllm { Model }
+
+glob llm = Model(model_name="gpt-4o-mini", verbose=True);
+```
+
+**After**
+
+```jac
+import from byllm.lib { Model }
+
+glob llm = Model(model_name="gpt-4o-mini", verbose=True);
+```
+
+### Version 0.8.8
+
+#### 1. `check` Keyword Removed - Use `assert` in Test Blocks
+
+The `check` keyword has been removed from Jaclang. All testing functionality is now unified under `assert` statements, which behave differently depending on context: raising exceptions in regular code and reporting test failures within `test` blocks.
+
+**Before**
+
+```jac
+glob a: int = 5;
+glob b: int = 2;
+
+test test_equality {
+    check a == 5;
+    check b == 2;
+}
+
+test test_comparison {
+    check a > b;
+    check a - b == 3;
+}
+
+test test_membership {
+    check "a" in "abc";
+    check "d" not in "abc";
+}
+
+test test_function_result {
+    check almostEqual(a + b, 7);
+}
+```
+
+**After**
+
+```jac
+glob a: int = 5;
+glob b: int = 2;
+
+test test_equality {
+    assert a == 5;
+    assert b == 2;
+}
+
+test test_comparison {
+    assert a > b;
+    assert a - b == 3;
+}
+
+test test_membership {
+    assert "a" in "abc";
+    assert "d" not in "abc";
+}
+
+test test_function_result {
+    assert almostEqual(a + b, 7);
+}
+```
+
+**Key Changes:**
+- Replace all `check` statements with `assert` statements in test blocks
+- `assert` statements in test blocks report test failures without raising exceptions
+- `assert` statements outside test blocks continue to raise `AssertionError` as before
+- Optional error messages can be added: `assert condition, "Error message";`
+
+This change unifies the testing and validation syntax, making the language more consistent while maintaining all testing capabilities.
+
 ### Version 0.8.4
 
 #### 1. Global, Nonlocal Operators Updated to `global`, `nonlocal`
