@@ -51,3 +51,10 @@ A project demonstrating the integration of Meaning-Typed Programming (MTP) for b
 A multimodal AI chatbot capable of interacting with documents, images, and videos. It leverages Jac's Object Spatial Programming, Mean Typed Programming, and Model Context Protocol to create a modular and intelligent system.
 
 See the [Jac-MCP Chatbot README](./jac-mcp-chatbot/README.md) for more details.
+
+---
+
+### EmailBuddy
+EmailBuddy is an email assistant to traverse your network of emails. Provides a chat interface where you can ask questions to an agentic assistant to answer your email queries. Agent uses OSP to better represent relationships between senders, recipients, and emails.
+
+See the [EmailBuddy README](./EmailBuddy/README.md) to learn more.
