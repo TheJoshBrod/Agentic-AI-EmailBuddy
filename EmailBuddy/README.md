@@ -7,6 +7,12 @@ Key Features
 - Graph-Based Representation: Emails stored as relationships between people and emails
 - Web-based Chat Interface: Easy to setup webpage
 
+## Video Overview
+
+Click Below to watch video walkthrough of how the project works!
+
+[![Walkthrough Video](https://img.youtube.com/vi/YkRBb4nE3Zg/0.jpg)](https://www.youtube.com/watch?v=YkRBb4nE3Zg)
+
 ## Architecture
 
 The system consists of:
