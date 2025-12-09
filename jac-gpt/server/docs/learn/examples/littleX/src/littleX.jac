@@ -1,27 +1,18 @@
 import datetime;
-#import from mtllm.llms { Ollama, OpenAI }
 import numpy;
-import from sentence_transformers { SentenceTransformer }
+import from sklearn.feature_extraction.text { TfidfVectorizer }
 import from sklearn.metrics.pairwise { cosine_similarity }
 
-# glob llm_open_ai = OpenAI(model_name="gpt-4o");
-# glob llm_ollama = Ollama(host="http://127.0.0.1:11434", model_name="llama3.2:1b");
-glob sentence_transformer = SentenceTransformer('all-MiniLM-L6-v2');
+glob vectorizer = TfidfVectorizer();
 
-def search_tweets(query: str, tweet:str) -> int;
-
-# can 'Extract and summarize trending themes, major highlights, and key interactions from recent tweets in one concise sentence.'
-# summarize_tweets(tweets: list[str]) -> 'Summarization': str by llm_open_ai();
+def search_tweets(query: str, tweet: str) -> int;
 
 node Profile {
     has username: str = "";
 
     can update with update_profile entry;
-
     can get with get_profile entry;
-
     can follow with follow_request entry;
-
     can un_follow with un_follow_request entry;
 }
 
@@ -40,17 +31,11 @@ node Tweet {
     has created_at: str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S");
 
     can update with update_tweet exit;
-
     can delete with remove_tweet exit;
-
     can like_tweet with like_tweet entry;
-
     can remove_like with remove_like entry;
-
     can comment with comment_tweet entry;
-
-    def get_info()-> TweetInfo;
-
+    def get_info()  -> TweetInfo;
     can get with load_feed entry;
 }
 
@@ -58,7 +43,6 @@ node Comment {
     has content: str;
 
     can update with update_comment entry;
-
     can delete with remove_comment entry;
 }
 
@@ -82,7 +66,9 @@ walker load_user_profiles {
     obj __specs__ {
         static has auth: bool = False;
     }
+
     can load_profiles with `root entry;
+    can report_profiles with exit;
 }
 
 walker follow_request {}
@@ -120,5 +106,5 @@ walker load_feed(visit_profile) {
     has results: list = [];
 
     can load with Profile entry;
-
+    can report_feed with exit;
 }
