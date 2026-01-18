@@ -1,7 +1,25 @@
-*.json
-!config.json
-*.db
-backend/__jac_gen__/*
+# Jac project
+packages/
+.jac_cache/
+*.jbc
+*.jir
+__jaccache__/
 
-install.sh
-vec0.so
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Node.js
+node_modules/
+
+# Jac build artifacts
+.jac/
+*.session
+*.session.*

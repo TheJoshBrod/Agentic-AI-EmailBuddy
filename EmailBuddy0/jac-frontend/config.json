@@ -1,0 +1,10 @@
+{
+  "vite": {
+    "plugins": [
+      "tailwindcss()"
+    ],
+    "lib_imports": [
+      "import tailwindcss from '@tailwindcss/vite'"
+    ]
+  }
+}

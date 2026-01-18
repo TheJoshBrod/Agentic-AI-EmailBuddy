@@ -1,0 +1,7 @@
+*.json
+!config.json
+*.db
+backend/__jac_gen__/*
+
+install.sh
+vec0.so
