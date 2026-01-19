@@ -13,6 +13,8 @@ walker init_root {
 # This runs when the server starts
 with entry {
     root spawn init_root();
+    root spawn load_graph_from_db();
+    root spawn PrintGraph();
 }
 
 # Client-side imports

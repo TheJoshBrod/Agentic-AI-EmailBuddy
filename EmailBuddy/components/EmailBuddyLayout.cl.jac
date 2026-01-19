@@ -38,6 +38,7 @@ def:pub EmailBuddyLayout(props: dict) -> any {
             response = await props.onQuery(text);
 
             # The walker reports a list of dictionaries, we access the first report
+            botResponse = {};
             if response.reports {
                  result = response.reports[0];
                  botResponse = {

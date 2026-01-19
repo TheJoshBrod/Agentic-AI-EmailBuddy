@@ -4,6 +4,7 @@
 import json;
 import uuid;
 import typing;
+import sqlite3;
 
 # Jac Files
 include service.tools;
@@ -11,10 +12,67 @@ include service.nodes;
 include service.rag;
 include service.prompts;
 
+
+walker load_graph_from_db {
+    can setup with `root entry {
+        conn = sqlite3.connect("vectorDB.db");
+        cursor = conn.cursor();
+        
+        # Check if table exists
+        try {
+            cursor.execute("SELECT content FROM emails");
+            rows = cursor.fetchall();
+            
+            emails_to_restore = [];
+            
+            for row in rows {
+                content = row[0];
+                # Parse the content string back into a dict
+                # Format: "date: <...>\nsender: <...>\nrecipient: <...>\nsubject: <...>\n\nbody:<...>"
+                
+                email_data = {};
+                
+                # Simple extraction using split (assuming standard format from create_email_embedding)
+                lines = content.split('\n');
+                for line in lines {
+                    if line.startswith("date: <") {
+                        email_data["date"] = line.split("date: <")[1].strip(">");
+                    } elif line.startswith("sender: <") {
+                        email_data["from"] = line.split("sender: <")[1].strip(">");
+                    } elif line.startswith("recipient: <") {
+                        email_data["to"] = line.split("recipient: <")[1].strip(">");
+                    } elif line.startswith("subject: <") {
+                        email_data["subject"] = line.split("subject: <")[1].strip(">");
+                    } elif line.startswith("body:<") {
+                        email_data["body"] = line.split("body:<")[1].strip(">");
+                    }
+                }
+                
+                if "from" in email_data {
+                    emails_to_restore.append(email_data);
+                }
+            }
+            
+            if len(emails_to_restore) > 0 {
+                print(f"Restoring {len(emails_to_restore)} emails from database...");
+                root spawn upload_emails(raw_emails=emails_to_restore, skip_embedding=True);
+            } else {
+                print("No emails found in database to restore.");
+            }
+            
+        } except Exception as e {
+            print(f"Database empty or error reading: {e}");
+        }
+        
+        conn.close();
+    }
+}
+
 glob conversation_history: list[dict] = [];
 
 walker upload_emails{
     has raw_emails: list;
+    has skip_embedding: bool = False;
 
     obj __specs__ {
         static has auth: bool = False;
@@ -131,7 +189,9 @@ walker upload_emails{
             }
 
             # Generate embedding for the email content
-            create_email_embedding(msg, email_uuid);
+            if not self.skip_embedding {
+                create_email_embedding(msg, email_uuid);
+            }
         }
     }
 }

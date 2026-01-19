@@ -123,7 +123,25 @@ def person_node_to_string(person: Person) -> str{
     return output;
 }
 
+
+walker PrintGraph {
+    can start with `root entry {
+        print("--- Graph Visualization ---");
+        visit [-->];
+    }
+
+    can visit_person with Person entry {
+        print(f"Person: {here.name} ({here.email})");
+        visit [-->];
+    }
+
+    can visit_email with EmailNode entry {
+        print(f"Email: {here.subject} [{here.email_uuid}]");
+    }
+}
+
 # Handles all Agentic selection
+
 
 obj Response{
     has option: str;

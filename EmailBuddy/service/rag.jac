@@ -24,7 +24,7 @@ def create_email_embedding(jsonified_email: dict, email_uuid: str) -> None {
     conn: sqlite3.Connection = sqlite3.connect("vectorDB.db");
     cursor: sqlite3.Cursor = conn.cursor();
     conn.enable_load_extension(True);
-    conn.load_extension("vec0.so");
+    conn.load_extension("service/vec0.so");
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS emails (
@@ -57,7 +57,7 @@ def find_emails(query: str, top_k: int = 10) -> list[tuple[str, str, float]] {
     conn: sqlite3.Connection = sqlite3.connect("vectorDB.db");
     cursor: sqlite3.Cursor  = conn.cursor();
     conn.enable_load_extension(True);
-    conn.load_extension("vec0.so");
+    conn.load_extension("service/vec0.so");
 
     query_embedding = model.encode([query])[0].tobytes();
 
@@ -70,6 +70,7 @@ def find_emails(query: str, top_k: int = 10) -> list[tuple[str, str, float]] {
 
     rows = cursor.fetchall();
     conn.close();
+
 
     return [(row[0], row[1], row[2]) for row in rows];
 }
