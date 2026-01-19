@@ -84,9 +84,7 @@ walker upload_emails{
             # Generate uuid for email (useful for retrieval later)
             stable_key: str = f"{msg.get('from','')}-{msg.get('date','')}-{msg.get('subject','')}-{msg.get('body','')}";
             email_uuid = str(uuid.uuid3(uuid.NAMESPACE_DNS, stable_key));
-            with open("file.txt", "a") as f{
-                f.write(email_uuid + "\t" + stable_key + "\n");
-            }
+
             # -----------------------
             # - HANDLE EMAIL SENDER -
             # -----------------------
