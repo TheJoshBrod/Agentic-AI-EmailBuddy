@@ -74,12 +74,6 @@ walker upload_emails{
     has raw_emails: list;
     has skip_embedding: bool = False;
 
-    obj __specs__ {
-        static has auth: bool = False;
-        static has private: bool = False;
-        static has methods: list[str] = ["POST"];
-    }
-
     can upload_email with `root entry{
         for msg in self.raw_emails {
 
@@ -199,12 +193,6 @@ walker upload_emails{
 walker get_email_count {
     has count: int = 0;
 
-    obj __specs__ {
-        static has auth: bool = False;
-        static has private: bool = False;
-        static has methods: list[str] = ["POST"];
-    }
-
     can start with `root entry {
         emails = [here -->](`?EmailNode);
         report {"count": len(emails)};
@@ -213,12 +201,6 @@ walker get_email_count {
 
 walker ask_email {
     has query: str;
-
-    obj __specs__ {
-        static has auth: bool = False;
-        static has private: bool = False;
-        static has methods: list[str] = ["POST"];
-    }
 
     def handle_email_query(query: str) -> None {
         # Initialized vars
