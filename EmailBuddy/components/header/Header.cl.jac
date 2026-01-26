@@ -36,7 +36,7 @@ def:pub Header(props: dict) -> any {
                     EmailBuddy
                 </Typography.Title>
                 <Typography.Text type="secondary" style={{ "fontSize": "12px", "color": subColor }}>
-                    {props.messageCount} emails indexed
+                    {props.messageCount + " emails indexed"}
                 </Typography.Text>
             </div>
 

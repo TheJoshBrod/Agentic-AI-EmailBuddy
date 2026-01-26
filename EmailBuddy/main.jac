@@ -20,6 +20,7 @@ with entry {
 # Client-side imports
 cl import from react { useEffect }
 cl import from .components.EmailBuddyLayout { EmailBuddyLayout }
+cl import "./global.css";
 
 # Client-side component
 cl {
