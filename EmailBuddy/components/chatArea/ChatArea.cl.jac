@@ -3,28 +3,41 @@ cl import from "@chatscope/chat-ui-kit-react" {
   ChatContainer,
   MessageList,
   Message,
-  MessageInput
+  MessageInput,
+  TypingIndicator
 }
 cl import "@chatscope/chat-ui-kit-styles/dist/default/styles.min.css";
 
 def:pub ChatArea(props: dict) -> any {
+    typing_indicator = None;
+    if props.isTyping {
+        typing_indicator = <TypingIndicator content="EmailBuddy is thinking" />;
+    }
+
+    isDark = props.theme == "dark";
+    inputBorder = "1px solid #e0e0e0";
+    inputBg = "#fff";
+    bgColor = "#f0f2f5";
+
+    if isDark {
+        inputBorder = "1px solid #303030";
+        inputBg = "#1f1f1f";
+        bgColor = "#141414";
+    }
+
     return (
         <div style={{
-            "flex": 1,
-            "position": "relative",
-            "margin": "0px 100px 50px",
-            "borderRadius": "8px",
-            "backgroundColor": "#dcaadf",
-            "border": "4px solid white",
-            "boxShadow": "0px 4px 8px rgba(0,0,0,0.3)",
-            "overflow": "hidden"
+            "width": "100%",
+            "height": "100%",
+            "overflow": "hidden",
+            "background": bgColor
         }}>
-            <MainContainer style={{
-                "backgroundColor": "#dcaadf", 
-                "height": "100%" 
-            }}>
+            <MainContainer style={{ "border": "none" }}>
                 <ChatContainer>
-                    <MessageList style={{"backgroundColor": "#dcaadf"}}>
+                    <MessageList 
+                        typingIndicator={typing_indicator}
+                        style={{ "background": bgColor }}
+                    >
                         {props.messages.map(lambda msg: any -> any {
                             return <Message
                                 model={{
@@ -32,6 +45,7 @@ def:pub ChatArea(props: dict) -> any {
                                     "sender": msg.sender,
                                     "direction": msg.direction
                                 }}
+                                avatarSpacer={True}
                             />;
                         })}
                     </MessageList>
@@ -43,6 +57,11 @@ def:pub ChatArea(props: dict) -> any {
                             }
                         }}
                         attachButton={False}
+                        style={{
+                            "padding": "10px",
+                            "borderTop": inputBorder,
+                            "background": inputBg
+                        }}
                     />
                 </ChatContainer>
             </MainContainer>

@@ -37,535 +37,492 @@ Jac Client is a framework that provides React-style components with JSX syntax, 
 
 ## Getting Started
 
-### Quick Setup
-
-```bash
 # Create a new full-stack project
-jac create --cl myapp
+jac create EmailBuddy --use client
 cd myapp
 jac start
-```
 
-After running these commands, visit `http://localhost:8000/cl/app` to see your application.
+Your First Full-Stack AI App#
+Build a complete AI-powered todo app through three phases. Each phase is runnable - you'll see your app evolve from a basic fullstack app to one with AI and user authentication.
 
-### Project Structure
+Phase 1: Functions & Frontend#
+Start with the simplest full-stack app: functions for server logic, minimal UI in one file.
 
-```
-myapp/
-├── jac.toml              # Configuration file
-├── main.jac              # Main entry point (frontend + backend)
-├── components/           # Reusable components (TypeScript/JSX)
-│   └── Button.cl.jac        # Example component
-├── assets/               # Static files (images, fonts)
-└── .jac/                 # Build artifacts (gitignored)
-```
+Create a project:
 
-## Core Concepts
 
-### 1. Basic Components
+jac create my-todo --use client --skip
+cd my-todo
+Create styles.css in your project:
 
-Components in Jac Client use a special `cl { }` block to mark frontend code:
 
-```jac
-cl {
-    def:pub app() -> any {
-        has count: int = 0;
+.container { max-width: 400px; margin: 40px auto; font-family: system-ui; padding: 20px; }
+.input-row { display: flex; gap: 8px; margin-bottom: 20px; }
+.input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+.btn-add { padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; }
+.todo-item { display: flex; align-items: center; padding: 10px; border-bottom: 1px solid #eee; }
+.todo-title { flex: 1; margin-left: 10px; }
+.todo-done { text-decoration: line-through; color: #888; }
+.btn-delete { background: #f44336; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer; }
+.category { padding: 2px 8px; background: #e0e0e0; border-radius: 12px; font-size: 12px; margin-right: 10px; }
+Replace main.jac with:
 
-        return <div>
-            <h1>Count: {count}</h1>
-            <button onClick={lambda -> None { count = count + 1; }}>
-                Increment
-            </button>
-        </div>;
-    }
-}
-```
 
-**Key Points:**
-- `cl { }` blocks mark frontend code
-- `def:pub app()` is the required entry point
-- `has` variables are automatically reactive (generates React useState)
+import from uuid { uuid4 }
+cl import "./styles.css";
 
-### 2. State Management
-
-#### Reactive State with `has`
-
-Inside client blocks (`.cl.jac` files), `has` variables automatically become React state:
-
-```jac
-cl {
-    def:pub Counter() -> any {
-        has count: int = 0;
-        has name: str = "World";
-
-        return <div>
-            <h1>Hello, {name}! Count: {count}</h1>
-            <input
-                value={name}
-                onChange={lambda e: any -> None { name = e.target.value; }}
-            />
-            <button onClick={lambda -> None { count = count + 1; }}>+1</button>
-        </div>;
-    }
-}
-```
-
-The compiler automatically:
-- Generates `useState` calls
-- Auto-injects the `useState` import from `@jac-client/utils`
-- Transforms assignments to setter calls
-
-#### useEffect Hook
-
-For side effects and lifecycle management:
-
-```jac
-cl {
-    import from react { useEffect }
-
-    def:pub DataLoader() -> any {
-        has data: list = [];
-
-        # Run once on mount
-        useEffect(lambda -> None {
-            async def load() -> None {
-                result = root spawn get_items();
-                data = result.reports;
-            }
-            load();
-        }, []);
-
-        return <ul>
-            {data.map(lambda item: any -> any {
-                return <li key={item._jac_id}>{item.name}</li>;
-            })}
-        </ul>;
-    }
-}
-```
-
-#### useContext (Global State)
-
-For sharing state across components:
-
-```jac
-cl {
-    import from react { createContext, useContext }
-
-    AppContext = createContext(None);
-
-    def:pub AppProvider(props: dict) -> any {
-        has user: any = None;
-
-        return <AppContext.Provider value={{ "user": user, "setUser": lambda v: any -> None { user = v; } }}>
-            {props.children}
-        </AppContext.Provider>;
-    }
-
-    def:pub UserDisplay() -> any {
-        ctx = useContext(AppContext);
-        return <div>User: {ctx.user or "Not logged in"}</div>;
-    }
-}
-```
-
-### 3. Backend Integration
-
-One of Jac's most powerful features is the seamless integration between frontend and backend.
-
-#### Define Backend Walker
-
-"Walkers" are Jac's way of defining backend logic:
-
-```jac
-# Backend code (outside cl block)
+# Data stored in graph nodes (persists across restarts)
 node Todo {
-    has text: str;
-    has done: bool = False;
+    has id: str,
+        title: str,
+        done: bool = False;
 }
 
-walker create_todo {
-    has text: str;
-
-    can create with `root entry {
-        new_todo = here ++> Todo(text=self.text);
-        report new_todo;
-    }
+# Server functions - def:pub creates HTTP endpoints automatically
+"""Add a todo and return it."""
+def:pub add_todo(title: str) -> dict {
+    todo = root ++> Todo(id=str(uuid4()), title=title);
+    return {"id": todo[0].id, "title": todo[0].title, "done": todo[0].done};
 }
 
-walker get_todos {
-    can fetch with `root entry {
-        for todo in [-->(`?Todo)] {
-            report todo;
+"""Get all todos."""
+def:pub get_todos -> list {
+    return [{"id": t.id, "title": t.title, "done": t.done} for t in [root-->](`?Todo)];
+}
+
+"""Toggle a todo's done status."""
+def:pub toggle_todo(id: str) -> dict {
+    for todo in [root-->](`?Todo) {
+        if todo.id == id {
+            todo.done = not todo.done;
+            return {"id": todo.id, "title": todo.title, "done": todo.done};
         }
     }
+    return {};
 }
-```
 
-#### Call from Frontend
+"""Delete a todo."""
+def:pub delete_todo(id: str) -> dict {
+    for todo in [root-->](`?Todo) {
+        if todo.id == id {
+            del todo;
+            return {"deleted": id};
+        }
+    }
+    return {};
+}
 
-Frontend components can call backend walkers directly:
+# Frontend - minimal UI in the same file
+cl def:pub app -> any {
+    has items: list = [],
+        text: str = "";
 
-```jac
+    async can with entry {
+        items = await get_todos();
+    }
+
+    async def add -> None {
+        if text.trim() {
+            todo = await add_todo(text.trim());
+            items = items.concat([todo]);
+            text = "";
+        }
+    }
+
+    async def toggle(id: str) -> None {
+        await toggle_todo(id);
+        items = items.map(
+            lambda t: any  -> any { return {
+                "id": t.id,
+                "title": t.title,
+                "done": not t.done
+            }
+            if t.id == id
+            else t; }
+        );
+    }
+
+    async def remove(id: str) -> None {
+        await delete_todo(id);
+        items = items.filter(lambda t: any  -> bool { return t.id != id; });
+    }
+
+    return
+        <div class="container">
+            <h1>
+                Todo App
+            </h1>
+            <div class="input-row">
+                <input
+                    class="input"
+                    value={text}
+                    onChange={lambda e: any  -> None { text = e.target.value;}}
+                    onKeyPress={lambda e: any  -> None { if e.key == "Enter" {
+                        add();
+                    }}}
+                    placeholder="What needs to be done?"
+                />
+                <button class="btn-add" onClick={add}>
+                    Add
+                </button>
+            </div>
+            {[<div key={t.id} class="todo-item">
+                <input
+                    type="checkbox"
+                    checked={t.done}
+                    onChange={lambda -> None { toggle(t.id);}}
+                />
+                <span class={"todo-title " + ("todo-done" if t.done else "")}>
+                    {t.title}
+                </span>
+                <button
+                    class="btn-delete"
+                    onClick={lambda -> None { remove(t.id);}}
+                >
+                    X
+                </button>
+            </div> for t in items]}
+        </div>;
+}
+Run it:
+
+
+jac start main.jac
+Open http://localhost:8000 - you have a working app!
+
+What you learned:
+
+Concept	Example
+node Todo	Graph node - persistent data container
+def:pub add_todo	Public function - auto HTTP endpoint
+root ++> Todo()	Create node connected to root
+[root -->](\?Todo)`	Query all Todo nodes from root
+await func()	Call server function from client (automatic HTTP)
+cl { }	Client-side code block
+has x: type	Reactive state (like useState)
+Phase 2: Add AI#
+Now add AI-powered categorization with one line of code.
+
+Update main.jac - just add the AI parts:
+
+
+import from uuid { uuid4 }
+import from byllm { Model }
+
+glob llm = Model(model_name="claude-sonnet-4-20250514");
+
+node Todo {
+    has id: str;
+    has title: str;
+    has done: bool = False;
+    has category: str = "other";  # NEW: AI-assigned category
+}
+
+"""Categorize a todo. Returns: work, personal, shopping, health, or other."""
+def categorize(title: str) -> str by llm();
+
+"""Add a todo with AI categorization."""
+def:pub add_todo(title: str) -> dict {
+    category = categorize(title);  # NEW: AI categorizes
+    todo = root ++> Todo(id=str(uuid4()), title=title, category=category);
+    return {"id": todo[0].id, "title": todo[0].title, "done": todo[0].done, "category": todo[0].category};
+}
+
+"""Get all todos."""
+def:pub get_todos() -> list {
+    return [{"id": t.id, "title": t.title, "done": t.done, "category": t.category} for t in [root -->](`?Todo)];
+}
+
+"""Toggle a todo's done status."""
+def:pub toggle_todo(id: str) -> dict {
+    for todo in [root -->](`?Todo) {
+        if todo.id == id {
+            todo.done = not todo.done;
+            return {"id": todo.id, "title": todo.title, "done": todo.done, "category": todo.category};
+        }
+    }
+    return {};
+}
+
+"""Delete a todo."""
+def:pub delete_todo(id: str) -> dict {
+    for todo in [root -->](`?Todo) {
+        if todo.id == id {
+            del todo;
+            return {"deleted": id};
+        }
+    }
+    return {};
+}
+
 cl {
     import from react { useEffect }
+    import "./styles.css";
 
-    def:pub TodoApp() -> any {
-        has todos: list = [];
+    def:pub app -> any {
+        has items: list = [];
         has text: str = "";
 
-        # Load todos on mount
         useEffect(lambda -> None {
-            async def load() -> None {
-                result = root spawn get_todos();
-                todos = result.reports;
-            }
+            async def load -> None { items = await get_todos(); }
             load();
         }, []);
 
-        # Add todo handler
-        def add_todo() -> None {
-            async def create() -> None {
-                result = root spawn create_todo(text=text);
-                todos = [...todos, result.reports[0]];
+        async def add -> None {
+            if text.trim() {
+                todo = await add_todo(text.trim());
+                items = items.concat([todo]);
                 text = "";
             }
-            create();
         }
 
-        return <div>
-            <input value={text} onChange={lambda e: any -> None { text = e.target.value; }} />
-            <button onClick={lambda -> None { add_todo(); }}>Add</button>
-            <ul>
-                {todos.map(lambda t: any -> any {
-                    return <li key={t._jac_id}>{t.text}</li>;
-                })}
-            </ul>
+        async def toggle(id: str) -> None {
+            await toggle_todo(id);
+            items = items.map(lambda t: any -> any {
+                return {"id": t.id, "title": t.title, "done": not t.done, "category": t.category} if t.id == id else t;
+            });
+        }
+
+        async def remove(id: str) -> None {
+            await delete_todo(id);
+            items = items.filter(lambda t: any -> bool { return t.id != id; });
+        }
+
+        return <div class="container">
+            <h1>AI Todo App</h1>
+            <div class="input-row">
+                <input class="input" value={text} onChange={lambda e: any -> None { text = e.target.value; }}
+                    onKeyPress={lambda e: any -> None { if e.key == "Enter" { add(); }}}
+                    placeholder="What needs to be done?" />
+                <button class="btn-add" onClick={add}>Add</button>
+            </div>
+            {[<div key={t.id} class="todo-item">
+                <input type="checkbox" checked={t.done} onChange={lambda -> None { toggle(t.id); }} />
+                <span class={"todo-title " + ("todo-done" if t.done else "")}>{t.title}</span>
+                <span class="category">{t.category}</span>
+                <button class="btn-delete" onClick={lambda -> None { remove(t.id); }}>X</button>
+            </div> for t in items]}
         </div>;
     }
 }
-```
+Set your API key and run:
 
-### 4. Routing
 
-Jac Client includes built-in routing capabilities:
+export ANTHROPIC_API_KEY="your-key"
+jac start main.jac
+Add "Buy groceries" - it auto-categorizes as "shopping"!
 
-```jac
-cl {
-    import from "@jac-client/utils" { Router, Routes, Route, Link, useParams, useNavigate }
+What you learned:
 
-    def:pub Home() -> any {
-        return <div>
-            <h1>Home</h1>
-            <Link to="/about">About</Link>
-            <Link to="/user/123">User 123</Link>
-        </div>;
-    }
+Concept	Example
+by llm()	AI generates function body from docstring
+glob llm	Configure the LLM model
+Phase 3: Walkers & Per-User Data#
+Refactor to walkers - Jac's native pattern for graph operations - and add per-user isolation.
 
-    def:pub About() -> any {
-        return <h1>About Page</h1>;
-    }
+Walkers are code that moves through the graph, triggering abilities as they enter nodes. Combined with walker:priv, each user gets their own data!
 
-    def:pub UserProfile() -> any {
-        params = useParams();
-        return <h1>User: {params.id}</h1>;
-    }
+Update main.jac:
 
-    def:pub app() -> any {
-        return <Router>
-            <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/about" element={<About />} />
-                <Route path="/user/:id" element={<UserProfile />} />
-            </Routes>
-        </Router>;
+
+import from uuid { uuid4 }
+import from byllm { Model }
+
+glob llm = Model(model_name="claude-sonnet-4-20250514");
+
+node Todo {
+    has id: str;
+    has title: str;
+    has done: bool = False;
+    has category: str = "other";
+}
+
+"""Categorize a todo. Returns: work, personal, shopping, health, or other."""
+def categorize(title: str) -> str by llm();
+
+# walker:priv means each user has their own root node
+walker:priv AddTodo {
+    has title: str;
+
+    can create with `root entry {
+        category = categorize(self.title);
+        new_todo = here ++> Todo(id=str(uuid4()), title=self.title, category=category);
+        report {"id": new_todo[0].id, "title": new_todo[0].title, "done": new_todo[0].done, "category": new_todo[0].category};
     }
 }
-```
 
-**Available Routing Hooks:**
-- `useNavigate()`: Programmatic navigation
-- `useLocation()`: Current pathname, search, hash
-- `useParams()`: URL parameters (`:id`)
+walker:priv ListTodos {
+    has todos: list = [];
 
-### 5. Authentication
-
-Built-in authentication utilities:
-
-```jac
-cl {
-    import from "@jac-client/utils" {
-        jacLogin, jacSignup, jacLogout, jacIsLoggedIn
+    can collect with `root entry { visit [-->](`?Todo); }
+    can gather with Todo entry {
+        self.todos.append({"id": here.id, "title": here.title, "done": here.done, "category": here.category});
     }
+    can report_all with `root exit { report self.todos; }
+}
 
-    def:pub LoginForm() -> any {
+walker:priv ToggleTodo {
+    has todo_id: str;
+
+    can find with `root entry { visit [-->](`?Todo); }
+    can toggle with Todo entry {
+        if here.id == self.todo_id {
+            here.done = not here.done;
+            report {"id": here.id, "title": here.title, "done": here.done, "category": here.category};
+        }
+    }
+}
+
+walker:priv DeleteTodo {
+    has todo_id: str;
+
+    can find with `root entry { visit [-->](`?Todo); }
+    can remove with Todo entry {
+        if here.id == self.todo_id {
+            del here;
+            report {"deleted": self.todo_id};
+        }
+    }
+}
+
+cl {
+    import from react { useEffect }
+    import from "@jac-client/utils" { jacSignup, jacLogin, jacLogout, jacIsLoggedIn }
+    import "./styles.css";
+
+    def:pub app -> any {
+        has items: list = [];
+        has text: str = "";
+        has isLoggedIn: bool = False;
         has username: str = "";
         has password: str = "";
+        has isSignup: bool = False;
         has error: str = "";
 
-        def handle_login() -> None {
-            async def login() -> None {
-                success = await jacLogin(username, password);
-                if success {
-                    print("Logged in!");
-                } else {
-                    error = "Login failed";
+        useEffect(lambda -> None { isLoggedIn = jacIsLoggedIn(); }, []);
+
+        useEffect(lambda -> None {
+            if isLoggedIn {
+                async def load -> None {
+                    result = root spawn ListTodos();
+                    items = result.reports[0] if result.reports else [];
                 }
+                load();
             }
-            login();
+        }, [isLoggedIn]);
+
+        async def handleAuth -> None {
+            error = "";
+            if isSignup {
+                result = await jacSignup(username, password);
+                if result["success"] { isLoggedIn = True; }
+                else { error = result["error"] if result["error"] else "Signup failed"; }
+            } else {
+                success = await jacLogin(username, password);
+                if success { isLoggedIn = True; }
+                else { error = "Invalid credentials"; }
+            }
         }
 
-        return <div>
-            <input placeholder="Username" value={username}
-                   onChange={lambda e: any -> None { username = e.target.value; }} />
-            <input type="password" placeholder="Password" value={password}
-                   onChange={lambda e: any -> None { password = e.target.value; }} />
-            <button onClick={lambda -> None { handle_login(); }}>Login</button>
-            {error and <p style={{"color": "red"}}>{error}</p>}
-        </div>;
-    }
-
-    def:pub ProtectedRoute(props: dict) -> any {
-        if not jacIsLoggedIn() {
-            return <Navigate to="/login" />;
+        def handleLogout -> None {
+            jacLogout();
+            isLoggedIn = False;
+            items = [];
         }
-        return props.children;
-    }
-}
-```
 
-## Styling Options
+        async def add -> None {
+            if text.trim() {
+                result = root spawn AddTodo(title=text.trim());
+                items = items.concat([result.reports[0]]);
+                text = "";
+            }
+        }
 
-### 1. Inline Styles
+        async def toggle(id: str) -> None {
+            result = root spawn ToggleTodo(todo_id=id);
+            items = items.map(lambda t: any -> any {
+                return result.reports[0] if t.id == id else t;
+            });
+        }
 
-```jac
-cl {
-    def:pub StyledButton() -> any {
-        return <button style={{
-            "backgroundColor": "blue",
-            "color": "white",
-            "padding": "10px 20px",
-            "borderRadius": "5px"
-        }}>
-            Click Me
-        </button>;
-    }
-}
-```
+        async def remove(id: str) -> None {
+            root spawn DeleteTodo(todo_id=id);
+            items = items.filter(lambda t: any -> bool { return t.id != id; });
+        }
 
-### 2. CSS Files
+        if not isLoggedIn {
+            return <div class="container">
+                <h1>{("Sign Up" if isSignup else "Log In")}</h1>
+                {(<div style={{"color": "red", "marginBottom": "10px"}}>{error}</div>) if error else None}
+                <input class="input" value={username} onChange={lambda e: any -> None { username = e.target.value; }}
+                    placeholder="Username" style={{"marginBottom": "10px", "width": "100%"}} />
+                <input class="input" type="password" value={password} onChange={lambda e: any -> None { password = e.target.value; }}
+                    placeholder="Password" style={{"marginBottom": "10px", "width": "100%"}} />
+                <button class="btn-add" onClick={handleAuth} style={{"width": "100%", "marginBottom": "10px"}}>
+                    {("Sign Up" if isSignup else "Log In")}
+                </button>
+                <div style={{"textAlign": "center"}}>
+                    <span onClick={lambda -> None { isSignup = not isSignup; error = ""; }} style={{"cursor": "pointer", "color": "#4CAF50"}}>
+                        {("Already have an account? Log In" if isSignup else "Need an account? Sign Up")}
+                    </span>
+                </div>
+            </div>;
+        }
 
-```jac
-cl {
-    import ".styles.css"
-
-    def:pub MyComponent() -> any {
-        return <div className="container">
-            <h1 className="title">Hello</h1>
+        return <div class="container">
+            <div style={{"display": "flex", "justifyContent": "space-between", "alignItems": "center", "marginBottom": "20px"}}>
+                <h1 style={{"margin": "0"}}>AI Todo App</h1>
+                <button onClick={handleLogout} style={{"padding": "8px 16px", "background": "#f0f0f0", "border": "1px solid #ddd", "borderRadius": "4px", "cursor": "pointer"}}>Log Out</button>
+            </div>
+            <div class="input-row">
+                <input class="input" value={text} onChange={lambda e: any -> None { text = e.target.value; }}
+                    onKeyPress={lambda e: any -> None { if e.key == "Enter" { add(); }}}
+                    placeholder="What needs to be done?" />
+                <button class="btn-add" onClick={add}>Add</button>
+            </div>
+            {[<div key={t.id} class="todo-item">
+                <input type="checkbox" checked={t.done} onChange={lambda -> None { toggle(t.id); }} />
+                <span class={"todo-title " + ("todo-done" if t.done else "")}>{t.title}</span>
+                <span class="category">{t.category}</span>
+                <button class="btn-delete" onClick={lambda -> None { remove(t.id); }}>X</button>
+            </div> for t in items]}
         </div>;
     }
 }
-```
-
-### 3. Tailwind CSS
-
-Configure in `jac.toml` and use directly:
-
-```jac
-cl {
-    def:pub TailwindComponent() -> any {
-        return <div className="bg-blue-500 text-white p-4 rounded-lg">
-            Tailwind Styled
-        </div>;
-    }
-}
-```
-
-## TypeScript Integration
-
-Jac Client can work with TypeScript components:
-
-```jac
-cl {
-    # Import TypeScript components
-    import from ".Button.tsx" { Button }
-
-    def:pub app() -> any {
-        return <div>
-            <Button label="Click me" onClick={lambda -> None { print("Clicked!"); }} />
-        </div>;
-    }
-}
-```
-
-## Package Management
-
-### Adding npm Packages
-
-```bash
-# Add npm packages
-jac add --cl lodash
-jac add --cl --dev @types/react
-
-# Remove packages
-jac remove --cl lodash
-
-# Install all dependencies
-jac add --cl
-```
-
-### Configuration in jac.toml
-
-```toml
-[dependencies.npm]
-lodash = "^4.17.21"
-axios = "^1.6.0"
-
-[dependencies.npm.dev]
-sass = "^1.77.8"
-```
-
-## File Organization
-
-### Separate Files Approach
-
-```
-src/
-├── app.jac           # Backend (nodes, walkers)
-├── app.cl.jac        # Frontend (no cl block needed)
-├── components/
-│   ├── Button.jac
-│   └── Modal.jac
-└── pages/
-    ├── Home.jac
-    └── About.jac
-```
-
-### Mixed in Single File
-
-```jac
-# Backend code
-node Todo { has text: str; }
-walker get_todos { ... }
-
-# Frontend code
-cl {
-    def:pub app() -> any {
-        # Uses backend walkers directly
-        result = root spawn get_todos();
-        ...
-    }
-}
-```
-
-## Build Commands
-
-```bash
-# Development server (uses main.jac by default)
-jac start
-
-# Start with specific file
-jac start app.jac
-
-# Production build
-jac build main.jac
-```
-
-## Hot Module Replacement (HMR)
-
-For faster development, use `--watch` mode:
-
-### Setup
-
-Ensure `watchdog` is installed:
-
-```toml
-[dev-dependencies]
-watchdog = ">=3.0.0"
-```
-
-```bash
-jac install --dev
-```
-
-### Development Workflow
-
-```bash
-# Start with HMR enabled
-jac start --watch
-```
-
-This starts:
-- **Vite dev server** on port 8000 (open in browser)
-- **API server** on port 8001 (proxied via Vite)
-- **File watcher** monitoring `*.jac` files
-
-When you edit a `.jac` file:
-1. File watcher detects the change
-2. Backend code is recompiled automatically
-3. Frontend hot-reloads via Vite
-4. Browser updates without full page refresh
-
-### HMR Options
-
-| Option | Description |
-|--------|-------------|
-| `--watch, -w` | Enable HMR mode |
-| `--api-port PORT` | Custom API port (default: main port + 1) |
-| `--no-client` | API-only mode (skip Vite/frontend) |
-
-## Exports (`:pub` keyword)
-
-For jac-client >= 0.2.4, use `:pub` to export:
-
-```jac
-cl {
-    # Exported function
-    def:pub MyComponent() -> any { ... }
-
-    # Exported variable
-    glob:pub API_URL: str = "https://api.example.com";
-
-    # Not exported (internal use only)
-    def helper() -> any { ... }
-}
-```
-
-## Learning Path
-
-The documentation suggests this tutorial progression:
-
-1. **Project Setup** - Initial configuration
-2. **First Component** - Creating basic components
-3. **Styling** - Different styling approaches
-4. **State Management** - Managing component state
-5. **Backend Integration** - Connecting to walkers
-6. **Authentication** - User authentication flows
-7. **Routing** - Client-side navigation
-
-## Key Features Summary
-
-- **Single Language**: Use Jac for both frontend and backend
-- **React-like Components**: JSX syntax with reactive state management
-- **Seamless Backend Calls**: Direct walker invocation from frontend
-- **Built-in Routing**: Client-side routing out of the box
-- **Authentication**: Pre-built auth utilities
-- **TypeScript Support**: Interoperability with TypeScript
-- **Hot Module Replacement**: Fast development workflow
-- **Multiple Styling Options**: Inline, CSS files, or Tailwind
-- **Type Safety**: End-to-end type checking
-
-## Related Resources
-
-- Full documentation: https://docs.jaseci.org/
-- Jac Programming Language Guide
-- Object-Spatial Programming (OSP) concepts
-- byLLM (AI integration)
-- Jac Scale (production deployment)
-
----
-
-This framework represents a modern approach to full-stack development, reducing context switching and improving developer productivity by unifying the entire stack under a single language and paradigm.
+Run it:
 
 
-Above is the syntax for Jac lang
+jac start main.jac
+Now create accounts and see each user has their own todo list!
+
+What changed:
+
+Before (Functions)	After (Walkers)
+def:pub add_todo()	walker:priv AddTodo { }
+await add_todo(x)	root spawn AddTodo(x)
+Shared data	Per-user data isolation
+No auth needed	Login/signup required
+New concepts:
+
+Concept	Purpose
+walker:priv	Each authenticated user gets their own root node
+visit [-->]	Walker moves to connected nodes
+with Todo entry	Ability triggered when entering Todo node
+root spawn Walker()	Start walker at graph root
+report	Return data from walker
+jacLogin/jacSignup	Built-in authentication utilities
+Summary#
+You built the same app three ways:
+
+Phase	Approach	What You Learned
+1	Functions + Nodes	Graph storage, function endpoints, frontend
+2	+ AI	Adding by llm() for intelligent features
+3	Walkers + Auth	Graph traversal, per-user isolation
+When to use each:
+
+Functions (def:pub): Simple CRUD operations, shared data
+Walkers: Complex graph traversals, per-user isolation with walker:priv
+Next Steps#
+Deploy: jac start main.jac --scale for Kubernetes
+Advanced AI: Structured outputs, agents - see ByLLM Guide
+Graph patterns: Edges, complex traversals - see OSP Guide

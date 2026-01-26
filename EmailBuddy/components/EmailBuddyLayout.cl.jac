@@ -1,10 +1,27 @@
 
-cl import from react { useState, useRef }
-cl import from antd { message }
+cl import from react { useState, useRef, useEffect }
+cl import from antd { message, Layout }
 cl import from .header.Header { Header }
 cl import from .chatArea.ChatArea { ChatArea }
 
 def:pub EmailBuddyLayout(props: dict) -> any {
+    # Theme state with safe initialization
+    [theme, setTheme] = useState("light");
+
+    useEffect(lambda -> None {
+        if window.matchMedia("(prefers-color-scheme: dark)").matches {
+            setTheme("dark");
+        }
+    }, []);
+
+    def toggleTheme() -> None {
+        newTheme = "dark";
+        if theme == "dark" {
+            newTheme = "light";
+        }
+        setTheme(newTheme);
+    }
+
     # State for messages
     [messages, setMessages] = useState([
         {
@@ -16,6 +33,9 @@ def:pub EmailBuddyLayout(props: dict) -> any {
     
     # State for typing indicator
     [isTyping, setIsTyping] = useState(False);
+
+    # State for email count
+    [emailCount, setEmailCount] = useState(0);
 
     # Ref for file input
     fileInputRef = useRef(None);
@@ -60,6 +80,21 @@ def:pub EmailBuddyLayout(props: dict) -> any {
         query_backend();
     }
     
+    # Fetch email count
+    async def fetchEmailCount() -> None {
+        if "onGetCount" in props {
+            response = await props.onGetCount();
+            if response.reports {
+                 result = response.reports[0];
+                 setEmailCount(result["count"]);
+            }
+        }
+    }
+
+    useEffect(lambda -> None {
+        fetchEmailCount();
+    }, []);
+
     # Trigger file input click
     def handleUpload() -> None {
         if fileInputRef.current {
@@ -93,6 +128,7 @@ def:pub EmailBuddyLayout(props: dict) -> any {
                         # Spawn upload_emails walker with parsed data
                         await props.onUploadEmails(emails);
                         message.success(f"Successfully uploaded {emails.length} emails!");
+                        await fetchEmailCount();
                     } except any as error {
                          console.error(error);
                          message.error("Failed to upload emails to backend");
@@ -124,22 +160,28 @@ def:pub EmailBuddyLayout(props: dict) -> any {
         ]);
     }
 
+    mainBg = "#f0f2f5";
+    if theme == "dark" {
+        mainBg = "#141414";
+    }
+
     return (
-        <div style={{
-            "height": "100vh",
-            "display": "flex",
-            "flexDirection": "column",
-            "backgroundColor": "#917093"
-        }}>
+        <Layout style={{ "height": "100vh", "background": mainBg }}>
             <Header 
-                messageCount={messages.length} 
+                messageCount={emailCount} 
                 onClearChat={clearChat} 
                 onUpload={handleUpload}
+                theme={theme}
+                toggleTheme={toggleTheme}
             />
-            <ChatArea 
-                messages={messages} 
-                onSend={handleSend} 
-            />
+            <Layout.Content style={{ "padding": "0 0" }}>
+                <ChatArea 
+                    messages={messages} 
+                    onSend={handleSend}
+                    isTyping={isTyping} 
+                    theme={theme}
+                />
+            </Layout.Content>
             <input 
                 type="file" 
                 ref={fileInputRef}
@@ -147,6 +189,6 @@ def:pub EmailBuddyLayout(props: dict) -> any {
                 accept=".json"
                 onChange={handleFileChange}
             />
-        </div>
+        </Layout>
     );
 }

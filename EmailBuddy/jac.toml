@@ -16,6 +16,7 @@ jac-client-node = "1.0.3"
 "@chatscope/chat-ui-kit-react" = "latest"
 "@chatscope/chat-ui-kit-styles" = "latest"
 antd = "latest"
+"@ant-design/icons" = "latest"
 vite = "latest"
 "@vitejs/plugin-react" = "latest"
 

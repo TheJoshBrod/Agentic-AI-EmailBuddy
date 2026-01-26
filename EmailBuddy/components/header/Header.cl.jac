@@ -1,54 +1,70 @@
-cl import from antd { Card, Typography }
-cl import from .HeaderButton { HeaderButton }
+cl import from antd { Layout, Typography, Space, Button, Switch }
+cl import from "@ant-design/icons" { UploadOutlined, DeleteOutlined, SunOutlined, MoonOutlined }
 
 def:pub Header(props: dict) -> any {
+    isDark = props.theme == "dark";
+    
+    headerBg = "#fff";
+    headerShadow = "0 2px 8px #f0f1f2";
+    headerBorder = "none";
+    titleColor = "#1f1f1f";
+    subColor = None;
+    uploadBtnType = "default";
+    
+    if isDark {
+        headerBg = "#1f1f1f";
+        headerShadow = "0 2px 8px rgba(0,0,0,0.4)";
+        headerBorder = "1px solid #303030";
+        titleColor = "#fff";
+        subColor = "rgba(255,255,255,0.45)";
+        uploadBtnType = "primary";
+    }
+
     return (
-        <Card
-            style={{
-                margin: "10px 100px 10px",
-                borderRadius: "8px",
-                backgroundColor: "#dcaadf",
-                border: "4px solid white",
-                boxShadow: "0px 4px 8px rgba(0,0,0,0.3)",
-                position: "relative"
-            }}
-        >
-            <div
-                style={{
-                    position: "absolute",
-                    left: "50%",
-                    top: "50%",
-                    transform: "translateX(-50%) translateY(-50%)",
-                    textAlign: "center",
-                }}
-            >
-                <Typography.Title level={3} style={{ margin: 0 }}>
+        <div style={{
+            "display": "flex",
+            "justifyContent": "space-between",
+            "alignItems": "center",
+            "padding": "16px 24px",
+            "background": headerBg,
+            "boxShadow": headerShadow,
+            "zIndex": 10,
+            "borderBottom": headerBorder
+        }}>
+            <div>
+                <Typography.Title level={4} style={{ "margin": 0, "color": titleColor }}>
                     EmailBuddy
                 </Typography.Title>
-                <Typography.Text type="secondary">
-                    Total Emails Uploaded: {props.messageCount}
+                <Typography.Text type="secondary" style={{ "fontSize": "12px", "color": subColor }}>
+                    {props.messageCount} emails indexed
                 </Typography.Text>
             </div>
 
-            <div
-                style={{
-                    display: "flex",
-                    justifyContent: "flex-end",
-                    gap: "8px",
-                }}
-            >
-                <HeaderButton
-                    text="Upload Email"
+            <Space>
+                <Switch
+                    checkedChildren={<MoonOutlined />}
+                    unCheckedChildren={<SunOutlined />}
+                    checked={isDark}
+                    onChange={props.toggleTheme}
+                />
+                
+                <Button 
+                    icon={<UploadOutlined />} 
                     onClick={props.onUpload}
-                    icon="/static/assets/upload-file.svg"
-                />
-                <HeaderButton
-                    text="Clear Chat"
+                    type={uploadBtnType}
+                    ghost={isDark}
+                >
+                    Upload Emails
+                </Button>
+                <Button 
+                    type="text" 
+                    danger={True}
+                    icon={<DeleteOutlined />} 
                     onClick={props.onClearChat}
-                    color="#ff4d4f"
-                    icon="/static/assets/trash.svg"
-                />
-            </div>
-        </Card>
+                >
+                    Clear Chat
+                </Button>
+            </Space>
+        </div>
     );
 }

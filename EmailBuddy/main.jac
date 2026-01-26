@@ -23,7 +23,7 @@ cl import from .components.EmailBuddyLayout { EmailBuddyLayout }
 
 # Client-side component
 cl {
-    def:pub app() -> None {
+    def:pub app() -> any {
         
         async def handle_query(query: str) -> any {
             return await root spawn ask_email(query=query);
@@ -33,11 +33,16 @@ cl {
             return await root spawn upload_emails(raw_emails=emails);
         }
 
+        async def handle_get_count() -> any {
+            return await root spawn get_email_count();
+        }
+
         return (
             <div>
                 <EmailBuddyLayout 
                     onQuery={handle_query}
                     onUploadEmails={handle_upload}
+                    onGetCount={handle_get_count}
                 />
             </div>
         );
