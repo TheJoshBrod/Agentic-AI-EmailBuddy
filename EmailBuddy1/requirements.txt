@@ -1,0 +1,6 @@
+jaseci
+byllm
+jac-client
+sentence_transformers
+numpy
+sqlite-vec
