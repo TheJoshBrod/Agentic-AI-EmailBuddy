@@ -2,7 +2,28 @@
 
 This document provides a summary of new features, improvements, and bug fixes in each version of **Jac-Client**. For details on changes that might require updates to your existing code, please refer to the [Breaking Changes](../breaking-changes.md) page.
 
-## jac-client 0.3.20 (Latest Release)
+## jac-client 0.3.23 (Latest Release)
+
+### New Features
+
+- **Feature: google-auth example wired to system-browser SSO**: The example's login and register buttons now drive the runtime's `jacSsoLogin()`, completing the previously missing `lib/auth` (AuthProvider/route guard) and storing the token under the canonical `jac_token` key so authenticated walker calls work. (jaseci-labs/jaseci#6485)
+
+### Refactors
+
+- **Examples drop redundant `cl` markers**: Bundled `.cl.jac` examples rely on the file extension for client context. (jaseci-labs/jaseci#6557)
+
+## jac-client 0.3.22
+
+### Bug Fixes
+
+- **Fix: jac-client CLI output no longer prints raw Rich markup**: npm/bun install and config-loader messages use `console.print(..., style=)`, `console.warning`, `console.success`, and `console.error` so status lines render with correct colors on the default ANSI console.
+
+### Refactors
+
+- **Refactor: client plugin consumes the unified core build pipeline**: The jac-client plugin no longer ships its own copy of the bun installer, Vite bundler, and client config loader; these moved into `jaclang.runtimelib.client` so the web, pwa, mobile, and desktop targets all share one runtime and one bundler. The plugin and its targets now import these from core instead of `jac_client.plugin.src.*`. (jaseci-labs/jaseci#6390)
+- **Refactor: Drop PyTauri-specific desktop handling**: Removed the `src-pytauri` setup detection/verification and the dead PyInstaller sidecar template from the client target plumbing. The `desktop` target (jac-desktop) is now a native webview build that needs no setup step.
+
+## jac-client 0.3.20
 
 ### New Features
 
