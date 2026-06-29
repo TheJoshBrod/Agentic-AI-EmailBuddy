@@ -12,7 +12,7 @@ This tutorial covers deploying to a local Kubernetes cluster (minikube or Docker
 > - jac-scale installed and enabled:
 >
 >   ```bash
->   pip install jac-scale
+>   jac install jac-scale
 >   ```
 >
 > - Time: ~10 minutes
@@ -418,7 +418,7 @@ kubectl get events --sort-by='.lastTimestamp'
 
 ```bash
 # Create a new full-stack project
-jac create todo --use client
+jac create todo --use web-static
 cd todo
 
 # Deploy to Kubernetes
