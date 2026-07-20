@@ -1,8 +1,8 @@
 # Syntax Quick Reference
 
-This page is a **lookup reference**, not a learning guide. For hands-on learning, start with the [AI Day Planner tutorial](../tutorials/first-app/build-ai-day-planner.md) which teaches these concepts progressively.
+This page is a **lookup reference**, not a learning guide. For hands-on learning, start with the [AI Day Planner tutorial](../../tutorials/first-app/build-ai-day-planner.md) which teaches these concepts progressively.
 
-**Try it:** [Functions](../tutorials/language/basics.md#functions) | [Objects](../tutorials/language/basics.md#objects-classes) | [Walkers & Graphs](../tutorials/language/osp.md) | [AI Integration](../tutorials/ai/quickstart.md) | [Full Reference](../reference/language/foundation.md)
+**Try it:** [Functions](../../tutorials/language/basics.md#functions) | [Objects](../../tutorials/language/basics.md#objects-classes) | [Walkers & Graphs](../../tutorials/language/osp.md) | [AI Integration](../../tutorials/ai/quickstart.md) | [Full Reference](foundation.md)
 
 ```jac
 # ============================================================
@@ -143,7 +143,7 @@ def say_hi() {
 }
 
 # Abstract function (declaration only, no body)
-def area() -> float abs;
+def area() -> float abst;
 
 # Function with all param types
 def kitchen_sink(
@@ -187,9 +187,9 @@ with entry {
         print(item);
     }
 
-    # --- for-to-by loop (C-style iteration) ---
-    # Syntax: for VAR = START to CONDITION by STEP { ... }
-    for i = 0 to i < 10 by i += 2 {
+    # --- C-style for loop ---
+    # Syntax: for INIT; CONDITION; UPDATE { ... }
+    for i = 0 while i < 10 with i += 2 {
         print(i);   # 0, 2, 4, 6, 8
     }
 
@@ -368,7 +368,7 @@ obj Example {
     static has instances: int = 0;
 
     # Deferred initialization (set in postinit)
-    has computed: int by postinit;
+    has computed: int postinit;
 
     def postinit() {
         self.computed = self.count * 2;
@@ -487,8 +487,12 @@ glob MAX_SIZE: int = 100;
 glob greeting: str = "Hello";
 
 def use_global() {
-    global greeting;          # Reference module-level glob
-    greeting = "Hola";
+    greeting = "Hola";        # Assignment rebinds the module-level glob
+}
+
+def shadow_global() {
+    greeting: str = "Hi";     # Typed declaration = new local; glob untouched
+    print(greeting);
 }
 
 
@@ -1234,16 +1238,75 @@ with entry {
 
 
 # ============================================================
+# Ownership & Borrowing (opt-in)
+# ============================================================
+# `own` marks a unique owner; assigning it elsewhere or passing it
+# to a call MOVES the value (use-after-move is a compile error).
+# `&`/`&mut` take a shared/mutable borrow; `imm` is deep-immutable.
+# Unannotated bindings are untouched -- the checker only tracks
+# what you tag. On native, full coverage enables zero-RC builds
+# (jac nacompile --gc none --enforce-nogc --assert-no-rc).
+
+obj Buffer { has n: int = 0; }
+
+def use_buf(x: Buffer) -> None {}
+
+with entry {
+    a: own Buffer = Buffer();   # unique owner
+    v: &Buffer = &a;            # shared borrow (owner is read-only while live)
+    use_buf(v);
+    m: imm Buffer = Buffer();   # deep-immutable: no writes through `m`, ever
+    b = a;                      # moves out of `a`; reading `a` again is E1301
+}
+
+# `in <handle> { }` opens a Region for allocation: everything created
+# under the open is reclaimed wholesale when the handle drops, and
+# references must not outlive it. `in Region() { }` is the anonymous,
+# block-scoped form.
+def scratch() -> None {
+    in Region() {
+        tmp = Buffer();   # reclaimed with the region at `}`
+    }
+    r: own Region = Region();
+    in r {
+        keep = Buffer();  # reclaimed when `r` drops (scope exit here)
+    }
+}
+
+# `def drop` runs exactly once when the object is destroyed, at its
+# owner's last use (native backend; Python does not call it yet).
+obj Res {
+    has fd: int = 0;
+
+    def drop {
+        print("closing", self.fd);
+    }
+}
+
+
+# ============================================================
 # FULL-STACK DEVELOPMENT (Codespaces)
 # ============================================================
-# Jac code can target different execution environments:
+# Jac code can target different execution environments.
+# The codespace is INFERRED by default:
+#   JSX / "npm" string import => declaration placed client; placement
+#                                propagates (scope-aware) to helpers,
+#                                globs, and imports the client code uses
+#   unmarked code             => server (the default, as always)
+#   def:pub / walkers         => stay server endpoints (client calls
+#                                become RPC bridges automatically)
+#   C extern-decl import      => declaration placed native; consumers
+#                                follow (importing a native module is
+#                                NOT a signal; pure code stays server)
+#   explicit markers          => always win over inference
+# Explicit override markers:
 #   sv { } = server (Python/PyPI)
 #   cl { } = client (JavaScript/npm)
 #   na { } = native (C ABI)
 
 
 # ============================================================
-# Codespace Sections
+# Codespace Sections (explicit markers -- optional overrides)
 # ============================================================
 
 # Server code (default -- code before any header is server)
@@ -1256,7 +1319,8 @@ def:pub get_todos() -> list {
 }
 
 # Client code in a braced block (compiles to JavaScript/React).
-# The braces bracket exactly the client region.
+# The braces bracket exactly the client region. The block is optional
+# here -- the JSX return would infer client placement on its own.
 cl {
     def:pub app() -> JsxElement {
         has items: list = [];
@@ -1282,10 +1346,13 @@ cl import from react { useState }
 # ============================================================
 # File Extension Conventions
 # ============================================================
-# .jac           Default (server codespace)
-# .sv.jac        Server-only variant
-# .cl.jac        Client-only variant (auto client codespace)
-# .na.jac        Native variant
+# Extensions pin a file's default codespace explicitly -- an
+# override, not a requirement (a plain .jac file infers placement):
+# .jac           Default (server; client/native parts inferred from
+#                JSX/npm and C extern-decl imports)
+# .sv.jac        Server-only variant (explicit)
+# .cl.jac        Client-only variant (explicit client codespace)
+# .na.jac        Native variant (explicit native codespace)
 # .impl.jac      Implementation annex (method bodies)
 # .test.jac      Test annex
 # .style.css     Scoped CSS annex (auto-scopes classes for the matching .cl.jac)
@@ -1454,8 +1521,8 @@ cl {
 # Types:    str, int, float, bool, list, tuple, set, dict, bytes, any, type
 # Decl:     obj, class, node, edge, walker, enum, has, can, def, impl,
 #           glob, test, type
-# Modifiers: pub, priv, protect, static, override, abs, async
-# Control:  if, elif, else, for, to, by, while, match, switch, case, default
+# Modifiers: pub, priv, protect, static, override, abst, async
+# Control:  if, elif, else, for, by, while, match, switch, case, default
 # Flow:     return, yield, break, continue, raise, del, assert, skip
 # OSP:      visit, spawn, entry, exit, disengage, report, here, visitor, root
 # AI:       by, llm, sem
@@ -1463,5 +1530,5 @@ cl {
 # Logic:    and, or, not, in, is
 # Codespace: sv, cl, na
 # Other:    import, include, from, as, try, except, finally, with, lambda,
-#           global, nonlocal, self, super, init, postinit
+#           self, super, init, postinit
 ```
