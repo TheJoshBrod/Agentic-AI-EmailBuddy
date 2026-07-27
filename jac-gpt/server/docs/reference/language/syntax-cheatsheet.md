@@ -10,7 +10,7 @@ This page is a **lookup reference**, not a learning guide. For hands-on learning
 # ============================================================
 # Jac compiles to Python bytecode, JavaScript, and native machine code.
 # It features graph-native programming, object-spatial walkers,
-# AI-native constructs, and full-stack codespaces -- all with
+# meaning-typed AI constructs, and full-stack codespaces -- all with
 # brace-delimited blocks.
 # Run a file with: jac <filename>
 
@@ -1077,6 +1077,14 @@ walker:pub get_item {
     }
 }
 
+# envelope=False returns a function's value as the body verbatim
+# (functions only) -- for callers that cannot read the JSON envelope
+@restspec(method=HTTPMethod.GET, path="/robots.txt",
+          produces="text/plain", envelope=False)
+def:pub robots() -> str {
+    return "User-agent: *\nAllow: /\n";
+}
+
 
 # ============================================================
 # Async Walkers
@@ -1473,24 +1481,24 @@ cl {
 # ============================================================
 # Routing (File-Based)
 # ============================================================
-# pages/index.jac          -> /
-# pages/about.jac          -> /about
-# pages/users/[id].jac     -> /users/:id  (dynamic param)
-# pages/[...notFound].jac  -> *            (catch-all)
-# pages/(auth)/layout.jac  -> route group  (no URL segment)
-# pages/layout.jac         -> root layout
+# pages/index.jac            -> /
+# pages/about.jac            -> /about
+# pages/users/[id].jac       -> /users/:id  (dynamic param)
+# pages/[...notFound].jac    -> *           (catch-all)
+# pages/(auth)/dashboard.jac -> /dashboard  (route group: no URL segment)
+# pages/layout.jac           -> root layout (filename is convention)
 
-# Page files export a `page` function inside a `cl { }` block:
-# cl {
-#     def:pub page() -> JsxElement { ... }
-# }
+# A route is any export returning JsxPage; a layout returns JsxLayout.
+# Both are ambient builtin types (no import). Export name and filename
+# are free -- the filename only decides the URL. One page export per
+# file (extra JsxPage exports are ignored); exports returning JsxElement
+# are not routes (co-located components need no special name).
+# def:pub Home() -> JsxPage { ... }
 
-# Layout files use <Outlet /> for child routes:
-# cl import from "@jac/runtime" { Outlet }
-# cl {
-#     def:pub layout() -> JsxElement {
-#         return <><nav>...</nav><Outlet /></>;
-#     }
+# Layouts use <Outlet /> for child routes:
+# import from "@jac/runtime" { Outlet }
+# def:pub Shell() -> JsxLayout {
+#     return <><nav>...</nav><Outlet /></>;
 # }
 
 
